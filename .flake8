@@ -2,4 +2,4 @@
 max-line-length = 150
 extend-ignore = E203,E701
 
-per-file-ignores = __init__.py:F401, mainwindow_ui.py:F401,E266, entity_widget_ui.py:F401,E266
+per-file-ignores = __init__.py:F401, main_window.py:F401,E266
