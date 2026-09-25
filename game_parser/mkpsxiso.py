@@ -23,17 +23,19 @@ def unpack(filepath: Path, destination: Path):
         raise Exception(exception)
 
 
-def pack(outputpath: Path):
+def pack(outputpath: Path) -> Path:
     """Given a list of files:
     Pack a ISO or BIN/CUE form them"""
     suffix = ".bin"
     if outputpath.suffix == ".iso":
         suffix = ".iso"
 
+    resultpath = outputpath.with_suffix(suffix)
+
     cmd = [
         "mkpsxiso",
         "-o",
-        str(outputpath.with_suffix(suffix)),
+        str(resultpath),
         "-c",
         str(outputpath.with_suffix(".cue")),
         "-y",
@@ -44,3 +46,5 @@ def pack(outputpath: Path):
         subprocess.run(cmd, shell=True)
     except subprocess.CalledProcessError as exception:
         raise Exception(exception)
+
+    return resultpath
