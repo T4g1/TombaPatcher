@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>555</width>
-    <height>387</height>
+    <width>624</width>
+    <height>524</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,7 +61,27 @@
      </layout>
     </item>
     <item>
-     <widget class="QTextEdit" name="log"/>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <widget class="QWidget" name="log_tab">
+       <attribute name="title">
+        <string>Log</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QTextEdit" name="log"/>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="skin_tab">
+       <attribute name="title">
+        <string>Skin</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_3"/>
+      </widget>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -70,7 +90,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>555</width>
+     <width>624</width>
      <height>22</height>
     </rect>
    </property>

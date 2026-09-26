@@ -51,6 +51,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSpacerItem,
     QStatusBar,
+    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -61,7 +62,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(555, 387)
+        MainWindow.resize(624, 524)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
@@ -100,21 +101,38 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_2)
 
-        self.log = QTextEdit(self.centralwidget)
+        self.tabWidget = QTabWidget(self.centralwidget)
+        self.tabWidget.setObjectName("tabWidget")
+        self.log_tab = QWidget()
+        self.log_tab.setObjectName("log_tab")
+        self.verticalLayout = QVBoxLayout(self.log_tab)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.log = QTextEdit(self.log_tab)
         self.log.setObjectName("log")
 
-        self.verticalLayout_2.addWidget(self.log)
+        self.verticalLayout.addWidget(self.log)
+
+        self.tabWidget.addTab(self.log_tab, "")
+        self.skin_tab = QWidget()
+        self.skin_tab.setObjectName("skin_tab")
+        self.horizontalLayout_3 = QHBoxLayout(self.skin_tab)
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.tabWidget.addTab(self.skin_tab, "")
+
+        self.verticalLayout_2.addWidget(self.tabWidget)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName("menubar")
-        self.menubar.setGeometry(QRect(0, 0, 555, 22))
+        self.menubar.setGeometry(QRect(0, 0, 624, 22))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
+
+        self.tabWidget.setCurrentIndex(1)
 
         QMetaObject.connectSlotsByName(MainWindow)
 
@@ -132,6 +150,14 @@ class Ui_MainWindow(object):
         )
         self.patch_button.setText(
             QCoreApplication.translate("MainWindow", "Patch", None)
+        )
+        self.tabWidget.setTabText(
+            self.tabWidget.indexOf(self.log_tab),
+            QCoreApplication.translate("MainWindow", "Log", None),
+        )
+        self.tabWidget.setTabText(
+            self.tabWidget.indexOf(self.skin_tab),
+            QCoreApplication.translate("MainWindow", "Skin", None),
         )
 
     # retranslateUi

@@ -45,6 +45,24 @@ def get_from_16bit_color(value: int) -> Pixel:
     return Pixel(red, green, blue, alpha)
 
 
+def to_16bit_color(pixel: Pixel) -> int:
+    """Packs a Pixel into two bytes of data (16-bit color)"""
+    if pixel.r == 0 and pixel.g == 0 and pixel.b == 0 and pixel.a == 1:
+        return 0
+
+    red = pixel.r // 4 if pixel.r <= 60 else ((pixel.r - 64) // 12) + 16
+    green = pixel.g // 4 if pixel.g <= 60 else ((pixel.g - 64) // 12) + 16
+    blue = pixel.b // 4 if pixel.b <= 60 else ((pixel.b - 64) // 12) + 16
+    alpha = 1 if pixel.a == 128 else 0
+
+    return (
+        (red & 0x1F)
+        | ((green & 0x1F) << 5)
+        | ((blue & 0x1F) << 10)
+        | ((alpha & 0x01) << 15)
+    )
+
+
 def get_clut_value(data: bytearray, clut_address: int, color_index: int) -> Pixel:
     clut_value_index = clut_address + color_index * COLOR_SIZE
     value = int.from_bytes(

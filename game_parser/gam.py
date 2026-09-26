@@ -1,7 +1,5 @@
 import struct
 
-from common import logger
-
 from pathlib import Path
 
 MAGIC_NUMBER = b"GAM\0"
@@ -29,43 +27,37 @@ def unpack(filepath: Path, outputpath: Path | None = None):
         command_word = struct.unpack("<H", f.read(2))[0]
 
         output = bytearray()
-        bit_index = 0
+        command_index = 0
 
         while len(output) < output_size:
-            if bit_index == 16:
+            if command_index == 16:
                 cmd_bytes = f.read(2)
                 if not cmd_bytes:
                     raise Exception("Unexpected EOF before hitting output_size")
                 command_word = struct.unpack("<H", cmd_bytes)[0]
-                bit_index = 0
+                command_index = 0
 
             # Extract current bit from right to left
-            bit = (command_word >> bit_index) & 1
-            bit_index += 1
+            command = (command_word >> command_index) & 1
+            command_index += 1
 
-            if bit == 0:
+            if command == 0:
                 # Literal byte copy
                 byte = f.read(1)
                 if not byte:
                     break
 
-                logger.debug(f"Byte copy 0x{byte.hex()}")
+                output += byte
 
-                output.extend(byte)
             else:
                 # Distance/Amount copy
                 distance = int.from_bytes(f.read(1))
                 amount = int.from_bytes(f.read(1))
 
-                logger.debug(f"Distance/Amount at:{distance} size:{amount}")
+                byte_index = len(output) - distance
 
-                # Copy from previous output
-                start_index = len(output) - distance
-                for _ in range(amount):
-                    if len(output) >= output_size:
-                        break
-
-                    output.append(output[start_index])
+                for i in range(amount):
+                    output.append(output[byte_index + i])
 
     with open(outputpath, "wb") as output_file:
         output_file.write(output[:output_size])
@@ -120,10 +112,6 @@ def find_longest_chain(data: bytes, at: int) -> tuple[int, int]:
     Search for a byte that can be repeated to represent the following bytes
     from the data after the given position.
 
-    This tries to match the original compression done by PSX.
-    It can be improved by matching chains of bytes instead of a single byte
-    or repeating patterns
-
     If no match is found, returns (0, 0).
     """
     best_offset = 0
@@ -136,9 +124,10 @@ def find_longest_chain(data: bytes, at: int) -> tuple[int, int]:
         length = 0
 
         while (
-            length < offset
+            length < 255
+            and offset_position + length < at
             and at + length < len(data)
-            and data[offset_position] == data[at + length]
+            and data[offset_position + length] == data[at + length]
         ):
             length += 1
 
@@ -153,13 +142,6 @@ if __name__ == "__main__":
     input = Path("output/files/AREA00/CLUT01.GAM")
     unpacked = Path("output/files/AREA00/CLUT01.bin")
     output = Path("output/files/AREA00/CLUT01.patched.GAM")
-    unpack(input, unpacked)
-
-    pack(unpacked, output)
-
-    input = Path("output/files/AREA00/CLUT01.patched.GAM")
-    unpacked = Path("output/files/AREA00/CLUT01.patched.bin")
-    output = Path("output/files/AREA00/CLUT01.patched.patched.GAM")
     unpack(input, unpacked)
 
     pack(unpacked, output)

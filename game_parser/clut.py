@@ -4,9 +4,7 @@ from PySide6.QtGui import QImage
 
 from vram import (
     Pixel,
-    VRAMMode,
     BYTES_PER_PIXEL,
-    BYTES_PER_LINE,
     COLOR_SIZE,
     get_from_16bit_color,
 )
@@ -26,18 +24,14 @@ def extract_img(filepath: Path):
     with open(filepath, "rb") as input_file:
         data = input_file.read()
 
-    mode = VRAMMode.DIRECT_COLOR
-    width = 1024
-    if mode is VRAMMode.CLUT_256:
-        width = 2048
-    elif mode is VRAMMode.CLUT_16:
-        width = 4096
-    height = 10
+    width = 256
+    height = 32
+    bytes_per_line = width * COLOR_SIZE
 
     pixels: bytearray = bytearray()
     for y in range(height):
         for x in range(width):
-            index = (y * BYTES_PER_LINE) + x * COLOR_SIZE
+            index = (y * bytes_per_line) + x * COLOR_SIZE
             if index > len(data):
                 break
 
