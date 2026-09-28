@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 
 from PySide6.QtCore import QThread, Signal
@@ -36,13 +37,6 @@ class PatchWorker(QThread):
         )
 
         self.patch_commands = patches
-        # self.patch_commands = [
-        #     PatchCommand(
-        #         "CLUT*.GAM",
-        #         0x0002,
-        #         bytes.fromhex("491C491C491C491C491C491C491C491C491C491C491C")
-        #     )
-        # ]
 
     def run(self):
         """Given the path to a Tomba! bin/iso file:
@@ -53,8 +47,7 @@ class PatchWorker(QThread):
         unpack(self.filepath, self.extractpath)
 
         self.status_changed.emit("Applying Tomba! patches...")
-        for patch_command in self.patch_commands:
-            self.patch_files(Path(OUTPUT_FILES), patch_command)
+        self.patch_files(Path(OUTPUT_FILES))
 
         self.status_changed.emit("Rebuilding files...")
         resultpath = pack(self.outputpath)
@@ -62,16 +55,23 @@ class PatchWorker(QThread):
         self.status_changed.emit(f"Output: {str(resultpath)}")
         self.finished.emit(True, "Game successfully patched!")
 
-    def patch_files(self, path: Path, command: PatchCommand):
-        """Apply a patch command"""
-        for file in self.filter_files(path, command.file_pattern):
-            self.patch(file, command.address, command.data)
-
     def filter_files(self, path: Path, pattern: str) -> list[Path]:
         """List all files in given directory that match given pattern"""
         return [file for file in path.rglob(pattern) if file.is_file()]
 
-    def patch(self, target_file: Path, address: int, data: bytes):
+    def patch_files(self, path: Path):
+        """Group commands by file and delegates patch application commands"""
+        file_to_commands = defaultdict(list)
+
+        for command in self.patch_commands:
+            matching_files = self.filter_files(path, command.file_pattern)
+            for target_file in matching_files:
+                file_to_commands[target_file].append(command)
+
+        for target_file, target_commands in file_to_commands.items():
+            self.patch(target_file, target_commands)
+
+    def patch(self, target_file: Path, commands: list[PatchCommand]):
         """Apply patch to given file"""
         self.status_changed.emit(f"Unpacking: {str(target_file)}...")
         unpacked = target_file.with_suffix(".BIN")
@@ -79,8 +79,9 @@ class PatchWorker(QThread):
 
         self.status_changed.emit(f"Patching: {str(unpacked)}...")
         with open(unpacked, "r+b") as file:
-            file.seek(address)
-            file.write(data)
+            for command in commands:
+                file.seek(command.address)
+                file.write(command.data)
 
         self.status_changed.emit(f"Packing: {str(unpacked)}...")
         gam_pack(unpacked, target_file)

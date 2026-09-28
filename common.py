@@ -20,3 +20,15 @@ class GuiLogger(logging.Handler):
 
     def emit(self, record):
         self.display.textCursor().insertText(f"{self.format(record)}\n")
+
+
+def bcd_to_int(bcd_byte: int) -> int:
+    """Converts BCD byte into integer"""
+    high_nibble = bcd_byte >> 4
+    low_nibble = bcd_byte & 0x0F
+
+    return (high_nibble * 10) + low_nibble
+
+
+def read_int(data: bytes, offset: int, size: int) -> int:
+    return int.from_bytes(data[offset : offset + size], byteorder="little")

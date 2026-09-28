@@ -10,6 +10,7 @@ def unpack(filepath: Path, destination: Path):
     Extracts all files from it"""
     cmd = [
         "dumpsxiso",
+        "-l",
         "-x",
         str(destination),
         "-s",

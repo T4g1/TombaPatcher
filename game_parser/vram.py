@@ -11,6 +11,8 @@ PAGES_PER_LINE = 16
 
 COLOR_SIZE = 2
 
+GRAYSCALE = 10
+
 
 class VRAMMode(enum.IntEnum):
     DIRECT_COLOR = 0
@@ -26,7 +28,15 @@ class Pixel:
     a: int = 255
 
 
-def get_from_16bit_color(value: int) -> Pixel:
+def get_grayscale_color(value: int) -> tuple[int, int, int, int]:
+    alpha = 255
+    if value == 0:
+        alpha = 0
+
+    return (value, value, value, alpha)
+
+
+def get_from_16bit_color(value: int) -> tuple[int, int, int, int]:
     """Two bytes of data"""
     red = (value >> 0) & 0x1F
     green = (value >> 5) & 0x1F
@@ -38,11 +48,7 @@ def get_from_16bit_color(value: int) -> Pixel:
     blue = (blue * 4) if blue <= 15 else 64 + ((blue - 16) * 12)
     alpha = 128 if alpha else 255
 
-    if value == 0:
-        # Prevents Pixmap from missing it
-        alpha = 1
-
-    return Pixel(red, green, blue, alpha)
+    return (red, green, blue, alpha)
 
 
 def to_16bit_color(pixel: Pixel) -> int:
@@ -63,7 +69,9 @@ def to_16bit_color(pixel: Pixel) -> int:
     )
 
 
-def get_clut_value(data: bytearray, clut_address: int, color_index: int) -> Pixel:
+def get_clut_value(
+    data: bytearray, clut_address: int, color_index: int
+) -> tuple[int, int, int, int]:
     clut_value_index = clut_address + color_index * COLOR_SIZE
     value = int.from_bytes(
         data[clut_value_index : clut_value_index + COLOR_SIZE], byteorder="little"

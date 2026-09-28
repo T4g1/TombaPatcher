@@ -2,12 +2,12 @@ import struct
 
 from pathlib import Path
 
-MAGIC_NUMBER = b"GAM\0"
+MAGIC_GAM = b"GAM\0"
 
 LZ_MIN_SIZE = 5
 
 
-def unpack(filepath: Path, outputpath: Path | None = None):
+def unpack(filepath: Path, outputpath: Path | None = None, offset: int = 0):
     """
     Decompresses a GAM file and writes the uncompressed data to disk.
     """
@@ -18,9 +18,11 @@ def unpack(filepath: Path, outputpath: Path | None = None):
         outputpath = filepath.with_suffix(".bin")
 
     with open(filepath, "rb") as f:
+        f.seek(offset)
+
         # Read header: magic, output_size, initial command_word
         magic = f.read(4)
-        if magic != MAGIC_NUMBER:
+        if magic != MAGIC_GAM:
             raise ValueError(f"Invalid file signature: {magic}")
 
         output_size = struct.unpack("<I", f.read(4))[0]
@@ -101,7 +103,7 @@ def pack(filepath: Path, outputpath: Path | None = None):
         )
 
     with open(outputpath, "wb") as output_file:
-        output_file.write(MAGIC_NUMBER)
+        output_file.write(MAGIC_GAM)
         output_file.write(struct.pack("<I", len(data)))
         output_file.write(output)
 
@@ -139,9 +141,15 @@ def find_longest_chain(data: bytes, at: int) -> tuple[int, int]:
 
 
 if __name__ == "__main__":
-    input = Path("output/files/AREA00/CLUT01.GAM")
-    unpacked = Path("output/files/AREA00/CLUT01.bin")
-    output = Path("output/files/AREA00/CLUT01.patched.GAM")
-    unpack(input, unpacked)
+    # Unpack all files
+    for path in Path("output/files").rglob("*.GAM"):
+        print(f"Unpacking: {str(path)}...")
+        unpack(path, path.with_suffix(".BIN"))
 
-    pack(unpacked, output)
+    # Tests packing/unpacking
+    # input = Path("output/files/AREA00/CLUT01.GAM")
+    # unpacked = Path("output/files/AREA00/CLUT01.bin")
+    # output = Path("output/files/AREA00/CLUT01.patched.GAM")
+    # unpack(input, unpacked)
+
+    # pack(unpacked, output)
