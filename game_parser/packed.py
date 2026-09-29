@@ -1,5 +1,7 @@
 """
 Format:
+Header:
+* Count: 4 bytes: Amount of entry packed
 Entries:
 * Start: 4 bytes: Offset for start of data for this entry
 * End: 4 bytes: Offset for end of data for this entry
