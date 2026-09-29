@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from PySide6 import QtWidgets
 
 logging.basicConfig(
@@ -32,3 +33,9 @@ def bcd_to_int(bcd_byte: int) -> int:
 
 def read_int(data: bytes, offset: int, size: int) -> int:
     return int.from_bytes(data[offset : offset + size], byteorder="little")
+
+
+def to_basepath(oldpath: Path, basepath: Path) -> Path:
+    newpath = basepath / oldpath.parent.name
+    newpath.mkdir(parents=True, exist_ok=True)
+    return newpath / oldpath.name

@@ -2,15 +2,20 @@ from pathlib import Path
 import struct
 from PIL import Image
 
-from game_parser.lba import load_lbas
-from game_parser.fla import load_flas
+from game_parser.fla import load_flas_with_lbas
 from game_parser.ld import load_ld
 from game_parser.files import get_suffix
 from game_parser.vram import get_grayscale_color, get_from_16bit_color
 
 
-def get_mode(filename: str):
-    if "CLUT" in filename:
+def get_mode(filename: Path):
+    if (
+        "CLUT" in str(filename)
+        or "A00001.0.10FF" in str(filename)
+        or "A00002.0.10FF" in str(filename)
+        or "A00004.0.10FF" in str(filename)
+        or "A00005.0.10FF" in str(filename)
+    ):
         return 2
 
     return 0
@@ -20,7 +25,7 @@ def parse_img(
     data: bytes, width: int, height: int, bpp_mode: int, offset: int = 0, palette=None
 ):
     def get_color(mode: int, clut, value: int):
-        if value >= len(clut):
+        if clut is None or len(clut) == 0:
             if mode == 0:
                 return get_grayscale_color(value << 4)
             elif mode == 1:
@@ -89,20 +94,12 @@ if __name__ == "__main__":
     pattern = "1080"
     basepath = Path("output/files")
 
-    print("Load LBA...")
     xmlpath = Path("output/tomba.xml")
-    lbas = load_lbas(xmlpath)
-
-    print("Load LFA...")
     mainpath = basepath / "SCUS_942.36"
-    flas = load_flas(mainpath)
-
-    print("Merging LBA and FLA")
-    for fla in flas.values():
-        fla.path = lbas[fla.lba]
+    flas = load_flas_with_lbas(mainpath, xmlpath)
 
     syspath = basepath / "SYS"
-    for ldpath in syspath.rglob("*.BIN"):
+    for ldpath in syspath.rglob("LDSYS.BIN"):
         print(f"Load LD: {ldpath}...")
         files = load_ld(ldpath)
 
@@ -137,14 +134,19 @@ if __name__ == "__main__":
                 / filepath.with_suffix(f".{file_count}.{text_suffix}").name
             )
 
-            if text_suffix == "1080":
+            if file.width > 0 and file.height > 0:
                 outputpath = Path("output/images") / processedpath.parent.name
                 outputpath.mkdir(parents=True, exist_ok=True)
                 outputpath = outputpath / processedpath.with_suffix(".PNG").name
 
                 print(f"Extracting {processedpath} to {outputpath}...")
 
-                mode = get_mode(processedpath.name)
+                mode = get_mode(processedpath)
+
+                if file.height == 1:
+                    file.height = 2
+                    mode = 2
+
                 print(
                     f"Parameters: w:{file.width}, h:{file.height}, mode:{mode} - x:0x{file.x:04X}, y:0x{file.y:04X}, header:{file.header.hex()}"
                 )
@@ -152,3 +154,33 @@ if __name__ == "__main__":
 
             file_count += 1
             offset += file.size
+
+    # cluts = [
+    #     ("A00001", 1, 8),
+    #     ("A00002", 1, 2),
+    #     ("DSPCLUT", 3, 15),
+    # ]
+
+    # filename = "A00014.0.10FF"
+
+    # for clut_spec in cluts:
+    #     clut_name = clut_spec[0]
+    #     clut_width = clut_spec[1]
+    #     clut_height = clut_spec[2]
+
+    #     clutpath = Path(f"output/images/SYSTEM/{clut_name}.0.mode2.PNG")
+
+    #     filepath = Path(f"output/processed/SYSTEM/{filename}")
+    #     with open(filepath, "rb") as f:
+    #         data = f.read()
+
+    #         for clut_x in range(clut_width):
+    #             for clut_y in range(clut_height):
+    #                 clut = load_clut(clutpath, clut_x * 16, clut_y, 0)
+
+    #                 mode = 0
+    #                 img, _ = parse_img(data, 256, 256, mode, palette=clut)
+    #                 if img:
+    #                     outputpath = Path(f"output/images/SYSTEM/{filename}.PNG")
+    #                     outputpath = outputpath.with_suffix(f".mode{mode}.clut-{clut_name}-{clut_x}-{clut_y}.PNG")
+    #                     img.save(outputpath)

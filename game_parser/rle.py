@@ -1,23 +1,21 @@
 from pathlib import Path
-from common import read_int
+
+from game_parser.packed import unpack
 
 COMMAND_SIZE = 8
 
 
-def unpack(filepath: Path, offset: int, size: int, outputpath: Path | None = None):
+def decompress(filepath: Path, outputpath: Path):
     """
     Decompresses a RLE file and writes the uncompressed data to disk.
     """
     global log_index
     log_index = 0
 
-    if outputpath is None:
-        outputpath = filepath.with_suffix(".bin")
-
     with open(filepath, "rb") as f:
         data = f.read()
 
-    data_index = offset
+    data_index = 0
 
     command_word = data[data_index]
     data_index += 1
@@ -26,7 +24,7 @@ def unpack(filepath: Path, offset: int, size: int, outputpath: Path | None = Non
     output += bytes.fromhex("10000000000000000100000000000000")
     command_index = 0
 
-    while data_index < offset + size:
+    while data_index < len(data):
         if command_index == COMMAND_SIZE:
             command_word = data[data_index]
             data_index += 1
@@ -60,30 +58,17 @@ def unpack(filepath: Path, offset: int, size: int, outputpath: Path | None = Non
 
 if __name__ == "__main__":
     basepath = Path("output/processed")
+    baseoutputpath = Path("output/rle")
+
     pattern = "*.RLE"
     for path in basepath.rglob(pattern):
-        print(f"Unpacking: {path}...")
+        filepaths = unpack(path, baseoutputpath)
+        for path_index in range(len(filepaths)):
+            filepath = filepaths[path_index]
+            print(f"RLE: Decompressing {filepath}...")
 
-        with open(path, "rb") as f:
-            data = f.read()
+            outputpath = baseoutputpath / filepath.parent.name
+            outputpath.mkdir(parents=True, exist_ok=True)
+            outputpath = outputpath / filepath.with_suffix(".TIM").name
 
-        frame_count = read_int(data, 0, size=4)
-        for frame_index in range(frame_count + 1):
-            offset = frame_index * 4
-
-            data_start = read_int(data, offset, size=4)
-            data_end = read_int(data, offset + 4, size=4)
-            size = data_end - data_start
-
-            try:
-                unpack(
-                    path,
-                    data_start,
-                    data_end - data_start,
-                    path.with_suffix(f".RLE.{frame_index}.TIM"),
-                )
-            except Exception:
-                print(
-                    f"Skipped {path}: Does not seem to be a RLE compressed TIM file..."
-                )
-                break
+            decompress(filepath, outputpath)

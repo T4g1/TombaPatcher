@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 from common import bcd_to_int
 
+from game_parser.lba import load_lbas
+
 FLA_ADDRESS = 0x0699A0
 FLA_ENTRY_COUNT = 0x41E
 FLA_ENTRY_SIZE = 0x08
@@ -37,6 +39,20 @@ def load_flas(mainpath: Path) -> dict[int, FLA]:
         flas[index] = FLA(index, lba, size)
 
         index += 1
+
+    return flas
+
+
+def load_flas_with_lbas(mainpath: Path, xmlpath: Path):
+    print("Load LBA...")
+    lbas = load_lbas(xmlpath)
+
+    print("Load LFA...")
+    flas = load_flas(mainpath)
+
+    print("Merging LBA and FLA")
+    for fla in flas.values():
+        fla.path = lbas[fla.lba]
 
     return flas
 
