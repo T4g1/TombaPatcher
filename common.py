@@ -14,6 +14,8 @@ ISO_PATH = OUTPUT_PATH / "iso"
 LD_PATH = OUTPUT_PATH / "ld"
 GAM_PATH = OUTPUT_PATH / "gam"
 PACKED_PATH = OUTPUT_PATH / "packed"
+RLE_PATH = OUTPUT_PATH / "rle"
+TIM_PATH = OUTPUT_PATH / "tim"
 
 XML_NAME = "tomba.xml"
 XML_PATH = OUTPUT_PATH / "tomba.xml"

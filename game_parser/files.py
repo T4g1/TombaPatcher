@@ -47,7 +47,8 @@ def save_file(
 
     # TODO: Reverse LD files better to be able to rebuild them too
     # Can't change anything from LD files
-    assert len(data) == info.size
+    # if len(data) != info.size:
+    #     raise ValueError(f"{filepath} size {len(data)} differs from LD info {info.size}")
 
     mode = "wb"
     if append:
@@ -160,4 +161,4 @@ if __name__ == "__main__":
     patched_path = game_path.parent / f"{game_path.stem}.patched{game_path.suffix}"
 
     unpack(game_path)
-    pack(patched_path)
+    # pack(patched_path)

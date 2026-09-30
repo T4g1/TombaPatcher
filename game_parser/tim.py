@@ -1,20 +1,87 @@
 import struct
 from pathlib import Path
+from PIL import Image
 
-from game_parser.image import parse_img
+# from game_parser.image import parse_img
 from game_parser.vram import get_from_16bit_color, COLOR_SIZE
+
+from common import (
+    all,
+    to_basepath,
+    RLE_PATH,
+    TIM_PATH,
+)
+
+TIM_SUFFIX = ".TIM"
+TIM_HEADER = bytes.fromhex("10000000000000000100000000000000")
 
 MAGIC_TIM = b"\x10\x00\x00\x00"
 
 
-def parse_tim_file(data):
+def generate_palette(bpp_mode: int) -> list[int]:
+    palette = [0, 0, 0, 0]
+    if bpp_mode == 0:
+        for i in range(16 - 1):
+            val = i << 4
+            palette.extend([val, val, val, 255])
+    else:
+        for i in range(256 - 1):
+            val = i >> 1
+            palette.extend([val, val, val, 255])
+    return palette
+
+
+def to_clut_index(data: bytes, index: int, bpp_mode: int):
+    if bpp_mode == 0:
+        raw_byte = data[index // 2]
+        return (raw_byte & 0x0F) if (index % 2 == 0) else ((raw_byte >> 4) & 0x0F)
+    elif bpp_mode == 1:
+        return data[index]
+    else:
+        return struct.unpack_from("<H", data, index * 2)[0]
+
+
+def parse_img(data: bytes, width: int, height: int, bpp_mode: int, palette=None):
+    if bpp_mode == 0:  # 4-bit (1 byte = 2 pixel)
+        width = width * 4
+    elif bpp_mode == 1:  # 8-bit
+        width = width * 2
+
+    total_pixels = width * height
+
+    img = Image.new("P", (width, height))
+    pixels = img.load()
+    assert pixels
+
+    if palette is None or len(palette) == 0:
+        palette = generate_palette(bpp_mode)
+
+    img.putpalette(palette, rawmode="RGBA")
+
+    for i in range(total_pixels):
+        x = i % width
+        y = i // width
+
+        clut_index = to_clut_index(data, i, bpp_mode)
+
+        pixels[x, y] = clut_index
+
+    return img
+
+
+def tim_to_png(filepath: Path, outputpath: Path):
     """
     Parses a single TIM image from a binary data buffer at a given offset.
     Returns (Image object, total_bytes_consumed) or (None, 0) if invalid.
     """
+    print(f"TIM: Extracting {filepath}...")
+
+    with open(filepath, "rb") as f:
+        data = f.read()
+
     tag, version, _, flags = struct.unpack_from("<BBHI", data)
     if tag != 0x10 or version != 0:
-        return None, 0
+        return
 
     bpp_mode = flags & 0x03  # Bits 0-1: Bit depth mode
     clut_present = (flags >> 3) & 1  # Bit 3: CLUT presence flag
@@ -28,10 +95,10 @@ def parse_tim_file(data):
         )
 
         if clut_w > 200 or clut_h > 200:
-            return None, 0
+            return
 
         if clut_w == 0 or clut_h == 0:
-            return None, 0
+            return
 
         # The header includes the length word itself, so data size is length - 12
         clut_data_offset = current_ptr + 12
@@ -43,56 +110,80 @@ def parse_tim_file(data):
             color = get_from_16bit_color(value)
 
             if color[3] == 0:
-                palettes.append((0, 255, 0))
+                palettes.append((0, 0, 0, 0))
             else:
-                palettes.append((color[0], color[1], color[2]))
+                palettes.append((color[0], color[1], color[2], 255))
 
         current_ptr += clut_length
 
-    img_length, img_x, img_y, img_fb_w, img_fb_h = struct.unpack_from(
+    img_length, img_x, img_y, width, height = struct.unpack_from(
         "<IHHHH", data, current_ptr
     )
+
     offset = current_ptr + 12
 
-    img, _ = parse_img(
-        data, img_fb_w, img_fb_h, bpp_mode, offset=offset, palette=palettes
-    )
+    img = parse_img(data[offset:], width, height, bpp_mode, palette=palettes)
+    assert img
 
-    # Total size consumed by this complete TIM file structure
-    total_tim_bytes = offset + img_length - 12
-    return img, total_tim_bytes
+    img.save(outputpath)
 
 
-def extract_tim(filepath: Path, outputpath: Path, address: int):
-    """Extract TIM file
-    Return bytes consumed"""
+def png_to_tim(filepath: Path, outputpath: Path):
+    output = bytearray()
+    output += TIM_HEADER
 
-    with open(filepath, "rb") as f:
-        data = f.read()
+    img = Image.open(filepath)
 
-    img, bytes_consumed = parse_tim_file(data[address:])
-    if img and img.width > 0 and img.height > 0 and bytes_consumed > 0:
-        imgdirectory = outputpath / filepath.parent.name
-        imgdirectory.mkdir(parents=True, exist_ok=True)
+    palette = img.getpalette(rawmode="RGBA")
 
-        imgpath = imgdirectory / filepath.with_suffix(f".{address:08X}.PNG").name
-        img.save(imgpath)
-        print(f"Extracted TIM file at offset 0x{address:08X} to {imgpath}")
+    assert palette
+
+    width = img.width
+    height = img.height
+
+    if len(palette) == 16 * 4:
+        bpp_mode = 0
+        pixel_per_byte = 2
+        width = img.width // 4
+    elif len(palette) == 256 * 4:
+        bpp_mode = 1
+        pixel_per_byte = 1
+        width = img.width // 2
+    else:
+        raise ValueError("Unsupported image mode")
+
+    output += struct.pack("<H", width)
+    output += struct.pack("<H", height)
+
+    total_bytes = img.width * img.height // pixel_per_byte
+    bytes_per_line = img.width // pixel_per_byte
+
+    # print(f"Size:({img.width}, {img.height}), bytes:{total_bytes}")
+
+    for i in range(total_bytes):
+        x = i % bytes_per_line * pixel_per_byte
+        y = i // bytes_per_line
+
+        if bpp_mode == 0:  # 4-bit indexed
+            value_lower = img.getpixel((x, y))
+            value_upper = img.getpixel((x + 1, y))
+
+            assert isinstance(value_lower, int)
+            assert isinstance(value_upper, int)
+
+            value = (value_upper << 4) | value_lower
+        else:  # bpp_mode == 2    # 8-bit indexed
+            value = img.getpixel((x, y))
+
+            assert isinstance(value, int)
+
+        output += struct.pack("<B", value)
+
+    with open(outputpath, "wb") as f:
+        f.write(output)
 
 
 if __name__ == "__main__":
-    needle = MAGIC_TIM
-    file_pattern = "*.TIM"
-
-    basepath = Path("output/rle")
-
-    for filepath in basepath.rglob(file_pattern):
-        with open(filepath, "rb") as file:
-            content = file.read()
-            address = content.find(needle)
-
-            if address != 0:
-                continue
-
-            print(f"Found pattern in: {filepath} at address: 0x{address:X}")
-            extract_tim(filepath, Path("output/tim"), address)
+    for filepath in RLE_PATH.rglob(all(TIM_SUFFIX)):
+        outputpath = to_basepath(filepath, TIM_PATH).with_suffix(".PNG")
+        tim_to_png(filepath, outputpath)

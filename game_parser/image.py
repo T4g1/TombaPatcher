@@ -4,7 +4,7 @@ from PIL import Image
 
 from game_parser.fla import load_flas_with_lbas
 from game_parser.ld import load_ld
-from game_parser.files import get_suffix
+from game_parser.files import get_suffix_from_type
 from game_parser.vram import get_grayscale_color, get_from_16bit_color
 
 
@@ -125,7 +125,7 @@ if __name__ == "__main__":
             assert filepath
 
             type_suffix = f"{file.type:04X}"
-            text_suffix = get_suffix(type_suffix)
+            text_suffix = get_suffix_from_type(file.type)
 
             processedpath = Path("output/processed") / filepath.parent.name
             processedpath.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,16 @@
 from pathlib import Path
 
+from game_parser.tim import TIM_SUFFIX, TIM_HEADER
+
+from common import (
+    all,
+    to_basepath,
+    RLE_PATH,
+    PACKED_PATH,
+)
+
+RLE_SUFFIX = ".RLE"
+
 COMMAND_SIZE = 8
 
 
@@ -7,8 +18,7 @@ def decompress(filepath: Path, outputpath: Path):
     """
     Decompresses a RLE file and writes the uncompressed data to disk.
     """
-    global log_index
-    log_index = 0
+    print(f"RLE: Decompressing {filepath}...")
 
     with open(filepath, "rb") as f:
         data = f.read()
@@ -19,7 +29,7 @@ def decompress(filepath: Path, outputpath: Path):
     data_index += 1
 
     output = bytearray()
-    output += bytes.fromhex("10000000000000000100000000000000")
+    output += TIM_HEADER
     command_index = 0
 
     while data_index < len(data):
@@ -54,16 +64,73 @@ def decompress(filepath: Path, outputpath: Path):
         output_file.write(output)
 
 
-if __name__ == "__main__":
-    basepath = Path("output/packed")
-    baseoutputpath = Path("output/rle")
+def compress(filepath: Path, outputpath: Path):
+    print(f"RLE: Compressing {filepath}...")
 
-    pattern = "*.RLE"
-    for filepath in basepath.rglob(pattern):
+    with open(filepath, "rb") as f:
+        f.seek(len(TIM_HEADER))
+        data = f.read()
+
+    output = bytearray()
+
+    # Placeholders to buffer up to 8 commands/data blocks at a time
+    pending_flags = []
+    pending_data = bytearray()
+
+    data_index = 0
+    data_len = len(data)
+
+    while data_index < data_len:
+        current_byte = data[data_index]
+
+        # Count consecutive matching bytes (up to a maximum of 255)
+        run_length = 0
+        while (
+            data_index + run_length < data_len
+            and data[data_index + run_length] == current_byte
+            and run_length < 255
+        ):
+            run_length += 1
+
+        # Determine if it's more efficient to use an amount/value copy
+        if run_length > 1:
+            pending_flags.append(1)
+            pending_data.append(run_length)
+            pending_data.append(current_byte)
+            data_index += run_length
+        else:
+            pending_flags.append(0)
+            pending_data.append(current_byte)
+            data_index += 1
+
+        if len(pending_flags) == COMMAND_SIZE:
+            command_word = 0
+            # Construct the command word from right to left (LSB to MSB)
+            for i, flag in enumerate(pending_flags):
+                command_word |= flag << i
+
+            output.append(command_word)
+            output.extend(pending_data)
+
+            pending_flags.clear()
+            pending_data.clear()
+
+    if pending_flags:
+        command_word = 0
+        for i, flag in enumerate(pending_flags):
+            command_word |= flag << i
+
+        output.append(command_word)
+        output.extend(pending_data)
+
+    with open(outputpath, "wb") as output_file:
+        output_file.write(output)
+
+
+if __name__ == "__main__":
+    for filepath in PACKED_PATH.rglob(all(RLE_SUFFIX)):
         print(f"RLE: Decompressing {filepath}...")
 
-        outputpath = baseoutputpath / filepath.parent.name
-        outputpath.mkdir(parents=True, exist_ok=True)
-        outputpath = outputpath / filepath.with_suffix(".TIM").name
+        outputpath = to_basepath(filepath, RLE_PATH).with_suffix(TIM_SUFFIX)
 
         decompress(filepath, outputpath)

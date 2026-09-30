@@ -38,9 +38,12 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
 
     entry_index = 0
 
-    # entry_count = read_int(data, 0, size=4)
+    entry_count = read_int(data, 0, size=4)
 
     first_offset = read_int(data, 4, size=4)
+
+    # End is sometimes at -3, sometimes -1...
+    end_threshold = len(data) - 3
 
     offset = 4
     while offset < first_offset:
@@ -48,6 +51,13 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
         data_end = len(data)
         if offset + 4 < first_offset:
             data_end = read_int(data, offset + 4, size=4)
+
+        if data_start >= end_threshold:
+            assert entry_index == entry_count
+            break
+
+        if data_end >= end_threshold:
+            data_end = len(data)
 
         size = data_end - data_start
 
@@ -87,6 +97,11 @@ def pack(inputdirectory: Path, outputpath: Path):
 
     pattern = f"{base_stem}.*{suffix}"
 
+    # 5080 files does not have the last entry being the EOF address
+    with_eof = suffix != ".5080"
+
+    # Ordering is important: This assumes the list is ordered by hexadecimal suffixes
+    # ie: 0001.x is before 000A.x
     unpacked_filepaths = [path for path in inputdirectory.rglob(pattern)]
 
     entry_count = len(unpacked_filepaths)
@@ -97,9 +112,15 @@ def pack(inputdirectory: Path, outputpath: Path):
 
         # Write file offsets
         offset = 4 + entry_count * 4
+        if with_eof:
+            offset += 4
+
         for unpacked_path in unpacked_filepaths:
             output.write(struct.pack("<I", offset))
             offset += os.path.getsize(unpacked_path)
+
+        if with_eof:
+            output.write(struct.pack("<I", offset))
 
         # Write files
         for unpacked_path in unpacked_filepaths:
