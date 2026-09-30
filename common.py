@@ -8,6 +8,34 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+OUTPUT_PATH = Path("output")
+
+ISO_PATH = OUTPUT_PATH / "iso"
+LD_PATH = OUTPUT_PATH / "ld"
+GAM_PATH = OUTPUT_PATH / "gam"
+PACKED_PATH = OUTPUT_PATH / "packed"
+
+XML_NAME = "tomba.xml"
+XML_PATH = OUTPUT_PATH / "tomba.xml"
+ENTRY_PATH = ISO_PATH / "SCUS_942.36"
+SYS_PATH = ISO_PATH / "SYS"
+
+
+PATTERN_TO_SUFFIX: dict[int, str] = {
+    0xD1FF: ".WFM",
+    0x60FF: ".RLE.PAK",
+    0x62FF: ".RLE.PAK",
+    0x5080: ".PAK",
+}
+
+
+def all(pattern: str):
+    return "*" + pattern
+
+
+def get_suffix_from_type(file_type: int):
+    return PATTERN_TO_SUFFIX.get(file_type, "")
+
 
 class GuiLogger(logging.Handler):
     """Interface between python logging and QT"""
@@ -39,3 +67,8 @@ def to_basepath(oldpath: Path, basepath: Path) -> Path:
     newpath = basepath / oldpath.parent.name
     newpath.mkdir(parents=True, exist_ok=True)
     return newpath / oldpath.name
+
+
+def rglob(path: Path, patterns: list[str]) -> list[Path]:
+    """Multi pattern rglob"""
+    return [file for pattern in patterns for file in path.rglob(pattern)]

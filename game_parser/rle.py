@@ -1,7 +1,5 @@
 from pathlib import Path
 
-from game_parser.packed import unpack
-
 COMMAND_SIZE = 8
 
 
@@ -57,18 +55,15 @@ def decompress(filepath: Path, outputpath: Path):
 
 
 if __name__ == "__main__":
-    basepath = Path("output/processed")
+    basepath = Path("output/packed")
     baseoutputpath = Path("output/rle")
 
     pattern = "*.RLE"
-    for path in basepath.rglob(pattern):
-        filepaths = unpack(path, baseoutputpath)
-        for path_index in range(len(filepaths)):
-            filepath = filepaths[path_index]
-            print(f"RLE: Decompressing {filepath}...")
+    for filepath in basepath.rglob(pattern):
+        print(f"RLE: Decompressing {filepath}...")
 
-            outputpath = baseoutputpath / filepath.parent.name
-            outputpath.mkdir(parents=True, exist_ok=True)
-            outputpath = outputpath / filepath.with_suffix(".TIM").name
+        outputpath = baseoutputpath / filepath.parent.name
+        outputpath.mkdir(parents=True, exist_ok=True)
+        outputpath = outputpath / filepath.with_suffix(".TIM").name
 
-            decompress(filepath, outputpath)
+        decompress(filepath, outputpath)

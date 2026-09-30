@@ -1,22 +1,21 @@
-import re
 from pathlib import Path
 
-from game_parser.mkpsxiso import unpack as dumpsxiso, pack as mkpsxiso
+from game_parser.mkpsxiso import dumpsxiso, mkpsxiso
 from game_parser.fla import load_flas_with_lbas
 from game_parser.ld import load_ld, FileInfo
-from game_parser.gam import unpack as unpack_gam, pack as pack_gam
+from game_parser.gam import ungam, gam, GAM_SUFFIX, UNGAM_SUFFIX, is_gam
 
-from common import to_basepath
-
-PATTERN_TO_SUFFIX: dict[str, str] = {"60FF": "RLE", "62FF": "RLE", "D1FF": "WFM"}
-
-
-def get_suffix(search_key: str):
-    for pattern, suffix in PATTERN_TO_SUFFIX.items():
-        if re.match(pattern, search_key):
-            return "." + suffix
-
-    return ""
+from common import (
+    to_basepath,
+    get_suffix_from_type,
+    all,
+    ISO_PATH,
+    LD_PATH,
+    GAM_PATH,
+    XML_PATH,
+    ENTRY_PATH,
+    SYS_PATH,
+)
 
 
 def load_file(filepath: Path, outputpath: Path, info: FileInfo, offset: int):
@@ -59,22 +58,14 @@ def save_file(
 
 
 def unpack(gamepath: Path):
-    processedpath = Path("output/processed")
+    dumpsxiso(gamepath, ISO_PATH)
 
-    print("Dump ISO...")
-    dumpath = Path("output/files")
-    dumpsxiso(gamepath, dumpath)
+    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
 
-    xmlpath = Path("output/tomba.xml")
-    mainpath = dumpath / "SCUS_942.36"
-    flas = load_flas_with_lbas(mainpath, xmlpath)
+    for ld_file in SYS_PATH.rglob("LD*.BIN"):
+        files = load_ld(ld_file)
 
-    syspath = dumpath / "SYS"
-    for ldpath in syspath.rglob("*.BIN"):
-        print(f"Load LD: {ldpath}...")
-        files = load_ld(ldpath)
-
-        filepath: Path | None = None
+        source_file: Path | None = None
         offset: int = 0
         file_count: int = 0
         for file in files:
@@ -84,48 +75,37 @@ def unpack(gamepath: Path):
                 fla = flas[file.index]
 
                 assert fla.path
-                filepath = dumpath / fla.path
+                source_file = ISO_PATH / fla.path
 
-                print(f"Loading from: {filepath}...")
+                print(f"Loading from: {source_file}...")
 
-                if filepath.suffix == ".GAM":
-                    unpackedpath = to_basepath(filepath, Path("output/ugam"))
+                if is_gam(source_file):
+                    gam_path = to_basepath(source_file, GAM_PATH).with_suffix(
+                        UNGAM_SUFFIX
+                    )
 
-                    print(f"Unpacking to: {unpackedpath}...")
-                    unpack_gam(filepath, unpackedpath)
-                    filepath = unpackedpath
+                    ungam(source_file, gam_path)
+                    source_file = gam_path
 
-            assert filepath
+            assert source_file
 
-            type_suffix = f"{file.type:04X}"
-            text_suffix = get_suffix(type_suffix)
+            text_suffix = get_suffix_from_type(file.type)
 
-            outputpath = processedpath / filepath.parent.name
-            outputpath.mkdir(parents=True, exist_ok=True)
-            outputpath = (
-                outputpath
-                / filepath.with_suffix(f".{file_count}.{type_suffix}{text_suffix}").name
+            output_path = to_basepath(source_file, LD_PATH).with_suffix(
+                f".{file_count}.{file.type:04X}{text_suffix}"
             )
 
-            load_file(filepath, outputpath, file, offset)
+            load_file(source_file, output_path, file, offset)
 
             file_count += 1
             offset += file.size
 
 
 def pack(resultpath: Path):
-    dumpath = Path("output/files")
-    processedpath = Path("output/processed")
-    xmlpath = Path("output/tomba.xml")
-    mainpath = dumpath / "SCUS_942.36"
-    flas = load_flas_with_lbas(mainpath, xmlpath)
+    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
 
-    ugampath = Path("output/ugam")
-
-    syspath = dumpath / "SYS"
-    for ldpath in syspath.rglob("*.BIN"):
-        print(f"Load LD: {ldpath}...")
-        files = load_ld(ldpath)
+    for ld_file in SYS_PATH.rglob("LD*.BIN"):
+        files = load_ld(ld_file)
 
         for file in files:
             if file.index != 0:
@@ -134,52 +114,50 @@ def pack(resultpath: Path):
                 fla = flas[file.index]
 
                 assert fla.path
-                archivepath = dumpath / fla.path
+                archive_path = ISO_PATH / fla.path
 
-                if archivepath.suffix == ".GAM":
-                    archivepath = to_basepath(archivepath, ugampath)
+                if is_gam(archive_path):
+                    archive_path = to_basepath(archive_path, GAM_PATH).with_suffix(
+                        UNGAM_SUFFIX
+                    )
 
-            assert archivepath
+            assert archive_path
 
-            type_suffix = f"{file.type:04X}"
-            text_suffix = get_suffix(type_suffix)
+            text_suffix = get_suffix_from_type(file.type)
 
-            processed_dir = processedpath / archivepath.parent.name
-            inputpath = (
+            processed_dir = LD_PATH / archive_path.parent.name
+            input_path = (
                 processed_dir
-                / archivepath.with_suffix(
-                    f".{file_count}.{type_suffix}{text_suffix}"
+                / archive_path.with_suffix(
+                    f".{file_count}.{file.type:04X}{text_suffix}"
                 ).name
             )
 
-            assert inputpath.exists()
+            assert input_path.exists()
 
-            save_file(inputpath, archivepath, file, offset, append=file_count != 0)
+            save_file(input_path, archive_path, file, offset, append=file_count != 0)
 
             file_count += 1
             offset += file.size
 
     # Re-pack GAM files
     count = 10
-    for path in ugampath.rglob("*.GAM"):
-        print(f"Packing: {path}...")
-        outputpath = to_basepath(path, dumpath)
-        pack_gam(path, outputpath)
+    for path in GAM_PATH.rglob(all(UNGAM_SUFFIX)):
+        output_path = to_basepath(path, ISO_PATH).with_suffix(GAM_SUFFIX)
+        gam(path, output_path)
 
         count -= 1
         if count == 0:
             break
 
-    # Re-build ISO/BIN
-    print("Dump ISO...")
     mkpsxiso(resultpath)
 
 
 if __name__ == "__main__":
-    gamepath = Path(
+    game_path = Path(
         "C:/Users/T4g1/Documents/Roms/PSX/Tomba! (USA) [SCUS-94236] Redump/Tomba! (USA).cue"
     )
-    resultpath = gamepath.parent / f"{gamepath.stem}.patched{gamepath.suffix}"
-    unpack(gamepath)
+    patched_path = game_path.parent / f"{game_path.stem}.patched{game_path.suffix}"
 
-    pack(resultpath)
+    unpack(game_path)
+    pack(patched_path)

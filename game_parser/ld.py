@@ -2,7 +2,12 @@ from pathlib import Path
 from dataclasses import dataclass
 from collections.abc import Iterator
 
-from common import read_int
+from common import (
+    read_int,
+    ENTRY_PATH,
+    XML_PATH,
+    SYS_PATH,
+)
 
 from game_parser.fla import load_flas_with_lbas
 
@@ -42,6 +47,8 @@ def group_by_file_index(files: list[FileInfo]) -> Iterator[list[FileInfo]]:
 
 
 def load_ld(filepath: Path) -> list[FileInfo]:
+    print(f"LD: Loading {filepath}")
+
     files: list[FileInfo] = []
 
     with open(filepath, "rb") as f:
@@ -74,18 +81,13 @@ def load_ld(filepath: Path) -> list[FileInfo]:
 
 
 if __name__ == "__main__":
-    ld_directory = Path("output/files/SYS")
-
     all_types = []
 
-    xmlpath = Path("output/tomba.xml")
-    mainpath = Path("output/files") / "SCUS_942.36"
-    flas = load_flas_with_lbas(mainpath, xmlpath)
+    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
 
     filepath = flas[0].path
 
-    for filepath in ld_directory.rglob("LDAR00.BIN"):
-        print(f"{filepath}:")
+    for filepath in SYS_PATH.rglob("LD*.BIN"):
         files = load_ld(filepath)
 
         for file in files:

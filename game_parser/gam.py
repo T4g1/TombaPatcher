@@ -2,20 +2,25 @@ import struct
 
 from pathlib import Path
 
+from common import ISO_PATH, all
+
+GAM_SUFFIX = ".GAM"
+UNGAM_SUFFIX = ".000"
+
 MAGIC_GAM = b"GAM\0"
 
 LZ_MIN_SIZE = 5
 
 
-def unpack(filepath: Path, outputpath: Path | None = None, offset: int = 0):
+def is_gam(filepath: Path) -> bool:
+    return filepath.suffix == GAM_SUFFIX
+
+
+def ungam(filepath: Path, outputpath: Path, offset: int = 0):
     """
     Decompresses a GAM file and writes the uncompressed data to disk.
     """
-    global log_index
-    log_index = 0
-
-    if outputpath is None:
-        outputpath = filepath.with_suffix(".bin")
+    print(f"GAM: Decompressing to {outputpath}...")
 
     with open(filepath, "rb") as f:
         f.seek(offset)
@@ -65,9 +70,8 @@ def unpack(filepath: Path, outputpath: Path | None = None, offset: int = 0):
         output_file.write(output[:output_size])
 
 
-def pack(filepath: Path, outputpath: Path | None = None):
-    if outputpath is None:
-        outputpath = filepath.with_suffix(".GAM")
+def gam(filepath: Path, outputpath: Path):
+    print(f"GAM: Compressing to {outputpath}...")
 
     output = bytearray()
 
@@ -141,15 +145,6 @@ def find_longest_chain(data: bytes, at: int) -> tuple[int, int]:
 
 
 if __name__ == "__main__":
-    # Unpack all files
-    for path in Path("output/files").rglob("*.GAM"):
-        print(f"Unpacking: {str(path)}...")
-        unpack(path, path.with_suffix(".BIN"))
-
-    # Tests packing/unpacking
-    # input = Path("output/files/AREA00/CLUT01.GAM")
-    # unpacked = Path("output/files/AREA00/CLUT01.bin")
-    # output = Path("output/files/AREA00/CLUT01.patched.GAM")
-    # unpack(input, unpacked)
-
-    # pack(unpacked, output)
+    for path in ISO_PATH.rglob(all(GAM_SUFFIX)):
+        print(f"GAM: Decompress {str(path)}...")
+        ungam(path, path.with_suffix(UNGAM_SUFFIX))
