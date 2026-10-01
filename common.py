@@ -9,6 +9,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 OUTPUT_PATH = Path("output")
+MODS_PATH = Path("mods")
 
 ISO_PATH = OUTPUT_PATH / "iso"
 LD_PATH = OUTPUT_PATH / "ld"

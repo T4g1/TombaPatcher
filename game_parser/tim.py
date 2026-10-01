@@ -183,7 +183,15 @@ def png_to_tim(filepath: Path, outputpath: Path):
         f.write(output)
 
 
+def tim_to_png_all(source: Path, to: Path):
+    for file in source.rglob(all(TIM_SUFFIX)):
+        tim_to_png(file, to_basepath(file, to).with_suffix(".PNG"))
+
+
+def png_to_tim_all(source: Path, to: Path):
+    for file in source.rglob(all(".PNG")):
+        png_to_tim(file, to_basepath(file, to).with_suffix(TIM_SUFFIX))
+
+
 if __name__ == "__main__":
-    for filepath in RLE_PATH.rglob(all(TIM_SUFFIX)):
-        outputpath = to_basepath(filepath, TIM_PATH).with_suffix(".PNG")
-        tim_to_png(filepath, outputpath)
+    tim_to_png_all(RLE_PATH, TIM_PATH)

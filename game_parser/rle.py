@@ -59,7 +59,7 @@ def decompress(filepath: Path, outputpath: Path):
             data_index += 2
             for _ in range(amount):
                 output += value
-
+    print(outputpath)
     with open(outputpath, "wb") as output_file:
         output_file.write(output)
 
@@ -127,10 +127,18 @@ def compress(filepath: Path, outputpath: Path):
         output_file.write(output)
 
 
+def decompress_all(source: Path, to: Path) -> set[Path]:
+    files = set()
+    for file in source.rglob(all(RLE_SUFFIX)):
+        decompress(file, to_basepath(file, to).with_suffix(TIM_SUFFIX))
+        files.add(file)
+    return files
+
+
+def compress_all(source: Path, to: Path):
+    for file in source.rglob(all(TIM_SUFFIX)):
+        compress(file, to_basepath(file, to).with_suffix(RLE_SUFFIX))
+
+
 if __name__ == "__main__":
-    for filepath in PACKED_PATH.rglob(all(RLE_SUFFIX)):
-        print(f"RLE: Decompressing {filepath}...")
-
-        outputpath = to_basepath(filepath, RLE_PATH).with_suffix(TIM_SUFFIX)
-
-        decompress(filepath, outputpath)
+    decompress_all(PACKED_PATH, RLE_PATH)

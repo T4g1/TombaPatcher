@@ -1,0 +1,15 @@
+{
+    "name": "Player Skin",
+    "description": "Change all color to Gray scale",
+    "version": "0.8.0",
+    "patchs": [
+        {
+            "file": "clut/CLUT01.PNG",
+            "targets": [
+                {
+                    "pattern": "AREA../CLUT.*"
+                }
+            ]
+        }
+    ]
+}

@@ -17,6 +17,8 @@ import os
 import struct
 from pathlib import Path
 
+from game_parser.rle import RLE_SUFFIX
+
 from common import (
     all,
     read_int,
@@ -28,7 +30,12 @@ from common import (
 PACKED_SUFFIX = ".PAK"
 
 
+def get_path_packed(base: Path) -> Path:
+    return base / "pak"
+
+
 def unpack(filepath: Path, basepath: Path) -> list[Path]:
+    """Unpacking file to a given directory"""
     print(f"Packed: Unpacking {filepath}...")
 
     results = []
@@ -90,6 +97,8 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
 
 
 def pack(inputdirectory: Path, outputpath: Path):
+    """Packing file in a given directory to a given path
+    Packed files must match the pattern implied by the output filename"""
     print(f"Packed: Re-packing to {outputpath}...")
 
     suffix = Path(outputpath.stem).suffix
@@ -128,6 +137,36 @@ def pack(inputdirectory: Path, outputpath: Path):
                 output.write(f.read())
 
 
+def unpack_all(source: Path, to: Path) -> set[Path]:
+    """Unpack all file with .PAK in source to given to
+    Returns list of packed files processed"""
+    files = set()
+    for file in source.rglob(all(PACKED_SUFFIX)):
+        unpack(file, to)
+        files.add(file)
+    return files
+
+
+def pack_all(source: Path, to: Path):
+    rle_files = [file for file in source.rglob(all(RLE_SUFFIX))]
+
+    # Build list of files from the extracted ones
+    files = set()
+    for file in rle_files:
+        parts = file.name.split(".")
+        cleaned_parts = parts[:-2] + [parts[-1]]
+
+        new_name = ".".join(cleaned_parts) + PACKED_SUFFIX
+        files.add(file.parent / new_name)
+
+    pack_all_files(source, to, files)
+
+
+def pack_all_files(source: Path, to: Path, files: set[Path]):
+    """Same as pack but with explicit list of files"""
+    for file in files:
+        pack(source, to_basepath(file, to))
+
+
 if __name__ == "__main__":
-    for path in LD_PATH.rglob(all(PACKED_SUFFIX)):
-        unpack(path, PACKED_PATH)
+    unpack_all(LD_PATH, PACKED_PATH)

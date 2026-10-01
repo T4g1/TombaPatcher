@@ -1,0 +1,15 @@
+{
+    "name": "Player Skin",
+    "description": "Replace the player skin with Open Source quality content",
+    "version": "0.0.1",
+    "patchs": [
+        {
+            "file": "player/A005.0.60FF.0000.PNG",
+            "targets": [
+                {
+                    "pattern": "AREA../A00.\\.0\\.60FF\\.0000"
+                }
+            ]
+        }
+    ]
+}
