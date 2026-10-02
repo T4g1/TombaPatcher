@@ -17,6 +17,7 @@ GAM_PATH = OUTPUT_PATH / "gam"
 PACKED_PATH = OUTPUT_PATH / "packed"
 RLE_PATH = OUTPUT_PATH / "rle"
 TIM_PATH = OUTPUT_PATH / "tim"
+IMG_PATH = OUTPUT_PATH / "img"
 
 XML_NAME = "tomba.xml"
 XML_PATH = OUTPUT_PATH / "tomba.xml"

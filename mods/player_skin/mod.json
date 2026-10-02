@@ -4,10 +4,11 @@
     "version": "0.0.1",
     "patchs": [
         {
-            "path": "player/A005.0.60FF.0000.PNG",
+            "file": "tomba/A005.0.60FF.0000.PNG",
             "targets": [
                 {
-                    "pattern": "AREA../A00.\\.0\\.60FF\\.0000"
+                    "stage": "tim",
+                    "pattern": "AREA*/A00*.0.60FF.0000.PNG"
                 }
             ]
         }

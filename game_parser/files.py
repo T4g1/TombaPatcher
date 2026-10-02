@@ -1,14 +1,12 @@
 from pathlib import Path
 
-from game_parser.mkpsxiso import dumpsxiso, mkpsxiso
-from game_parser.fla import load_flas_with_lbas
-from game_parser.ld import load_ld, FileInfo
-from game_parser.gam import ungam, gam, GAM_SUFFIX, UNGAM_SUFFIX, is_gam
+from game_parser.fla import load_flas_with_lbas, FLA
+from game_parser.ld import load_ld, write_ld, FileInfo
+from game_parser.gam import UNGAM_SUFFIX, is_gam
 
 from common import (
     to_basepath,
     get_suffix_from_type,
-    all,
     ISO_PATH,
     LD_PATH,
     GAM_PATH,
@@ -37,18 +35,25 @@ def load_file(filepath: Path, outputpath: Path, info: FileInfo, offset: int):
 
 def save_file(
     filepath: Path, outputpath: Path, info: FileInfo, offset: int, append: bool = True
-):
+) -> bool:
+    """Returns True if the file saved differs from the given file info
+    In which case, the file info is updated with the new value"""
     print(
         f"Saving {outputpath}: 0x{info.index:03X} of type 0x{info.type:04X} at {offset} of size {info.size}..."
     )
 
+    info_changed = False
+
     with open(filepath, "rb") as f:
         data = f.read()
 
-    # TODO: Reverse LD files better to be able to rebuild them too
-    # Can't change anything from LD files
-    # if len(data) != info.size:
-    #     raise ValueError(f"{filepath} size {len(data)} differs from LD info {info.size}")
+    if len(data) != info.size:
+        info.size = len(data)
+        info_changed = True
+
+        if info.width != 0 or info.height != 0:
+            # TODO: Find a way to update width/height too
+            raise ValueError("Changing image size is not yet supported")
 
     mode = "wb"
     if append:
@@ -57,11 +62,10 @@ def save_file(
     with open(outputpath, mode) as f:
         f.write(data)
 
+    return info_changed
 
-def unpack(gamepath: Path):
-    dumpsxiso(gamepath, ISO_PATH)
 
-    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
+def unpack(base: Path, to: Path, sys_path: Path, gam_path: Path, flas: dict[int, FLA]):
 
     for ld_file in SYS_PATH.rglob("LD*.BIN"):
         files = load_ld(ld_file)
@@ -76,23 +80,21 @@ def unpack(gamepath: Path):
                 fla = flas[file.index]
 
                 assert fla.path
-                source_file = ISO_PATH / fla.path
+                source_file = base / fla.path
 
                 print(f"Loading from: {source_file}...")
 
                 if is_gam(source_file):
-                    gam_path = to_basepath(source_file, GAM_PATH).with_suffix(
+                    # Assume UNGAM is already done
+                    source_file = to_basepath(source_file, gam_path).with_suffix(
                         UNGAM_SUFFIX
                     )
-
-                    ungam(source_file, gam_path)
-                    source_file = gam_path
 
             assert source_file
 
             text_suffix = get_suffix_from_type(file.type)
 
-            output_path = to_basepath(source_file, LD_PATH).with_suffix(
+            output_path = to_basepath(source_file, to).with_suffix(
                 f".{file_count}.{file.type:04X}{text_suffix}"
             )
 
@@ -102,11 +104,10 @@ def unpack(gamepath: Path):
             offset += file.size
 
 
-def pack(resultpath: Path):
-    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
-
-    for ld_file in SYS_PATH.rglob("LD*.BIN"):
+def pack(base: Path, to: Path, sys_path: Path, gam_path: Path, flas: dict[int, FLA]):
+    for ld_file in sys_path.rglob("LD*.BIN"):
         files = load_ld(ld_file)
+        updated_files = []
 
         for file in files:
             if file.index != 0:
@@ -115,10 +116,10 @@ def pack(resultpath: Path):
                 fla = flas[file.index]
 
                 assert fla.path
-                archive_path = ISO_PATH / fla.path
+                archive_path = to / fla.path
 
                 if is_gam(archive_path):
-                    archive_path = to_basepath(archive_path, GAM_PATH).with_suffix(
+                    archive_path = to_basepath(archive_path, gam_path).with_suffix(
                         UNGAM_SUFFIX
                     )
 
@@ -126,7 +127,7 @@ def pack(resultpath: Path):
 
             text_suffix = get_suffix_from_type(file.type)
 
-            processed_dir = LD_PATH / archive_path.parent.name
+            processed_dir = base / archive_path.parent.name
             input_path = (
                 processed_dir
                 / archive_path.with_suffix(
@@ -136,29 +137,20 @@ def pack(resultpath: Path):
 
             assert input_path.exists()
 
-            save_file(input_path, archive_path, file, offset, append=file_count != 0)
+            if save_file(
+                input_path, archive_path, file, offset, append=file_count != 0
+            ):
+                updated_files.append(file)
 
             file_count += 1
             offset += file.size
 
-    # Re-pack GAM files
-    count = 10
-    for path in GAM_PATH.rglob(all(UNGAM_SUFFIX)):
-        output_path = to_basepath(path, ISO_PATH).with_suffix(GAM_SUFFIX)
-        gam(path, output_path)
-
-        count -= 1
-        if count == 0:
-            break
-
-    mkpsxiso(resultpath)
+    # Update LD files
+    for file in updated_files:
+        write_ld(file)
 
 
 if __name__ == "__main__":
-    game_path = Path(
-        "C:/Users/T4g1/Documents/Roms/PSX/Tomba! (USA) [SCUS-94236] Redump/Tomba! (USA).cue"
-    )
-    patched_path = game_path.parent / f"{game_path.stem}.patched{game_path.suffix}"
-
-    unpack(game_path)
-    # pack(patched_path)
+    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
+    unpack(ISO_PATH, LD_PATH, SYS_PATH, GAM_PATH, flas)
+    pack(LD_PATH, ISO_PATH, SYS_PATH, GAM_PATH, flas)

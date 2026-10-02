@@ -2,7 +2,7 @@ import struct
 
 from pathlib import Path
 
-from common import ISO_PATH, all
+from common import all, to_basepath, ISO_PATH
 
 GAM_SUFFIX = ".GAM"
 UNGAM_SUFFIX = ".000"
@@ -144,7 +144,24 @@ def find_longest_chain(data: bytes, at: int) -> tuple[int, int]:
     return best_offset, best_length
 
 
+def ungam_all(base: Path, to: Path):
+    for file in base.rglob(GAM_SUFFIX):
+        ungam(file, to_basepath(file, to).with_suffix(UNGAM_SUFFIX))
+
+
+def gam_all(base: Path, to: Path, matching: list[str] = []):
+    """Compress all files to GAM file
+    Take an optional list of files that should be compressed"""
+
+    def is_matching(path: Path, matching: list[str]):
+        stem = path.name.split(".")[0]
+        return len(matching) == 0 or stem in matching
+
+    for file in base.rglob(all(UNGAM_SUFFIX)):
+        if is_matching(file, matching):
+            gam(file, to_basepath(file, to).with_suffix(GAM_SUFFIX))
+
+
 if __name__ == "__main__":
     for path in ISO_PATH.rglob(all(GAM_SUFFIX)):
-        print(f"GAM: Decompress {str(path)}...")
         ungam(path, path.with_suffix(UNGAM_SUFFIX))

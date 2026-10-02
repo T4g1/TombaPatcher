@@ -1,3 +1,4 @@
+import struct
 from pathlib import Path
 from dataclasses import dataclass
 from collections.abc import Iterator
@@ -18,6 +19,11 @@ SIZE_FACTOR = 2
 
 @dataclass
 class FileInfo:
+    # Which LD file holds this info
+    ld_file: Path
+    # Where this info is in the LD file
+    ld_address: int
+
     index: int
     type: int
     ram_address: int
@@ -46,6 +52,19 @@ def group_by_file_index(files: list[FileInfo]) -> Iterator[list[FileInfo]]:
     yield files[last_file_start:]
 
 
+def write_ld(info: FileInfo):
+    """Write back the FileInfo entry into the LD file"""
+    with open(info.ld_file, "r+b") as f:
+        f.seek(info.ld_address)
+
+        f.write(info.header)
+        f.write(struct.pack("<H", info.index))
+        f.write(struct.pack("<H", info.type))
+        f.write(struct.pack("<I", info.ram_address))
+        f.write(struct.pack("<I", info.size))
+        f.write(struct.pack("<I", 0))
+
+
 def load_ld(filepath: Path) -> list[FileInfo]:
     print(f"LD: Loading {filepath}")
 
@@ -53,6 +72,7 @@ def load_ld(filepath: Path) -> list[FileInfo]:
 
     with open(filepath, "rb") as f:
         entry = f.read(LD_ENTRY_SIZE)
+        entry_address = 0
         while entry != bytes() and len(entry) == LD_ENTRY_SIZE:
             index = read_int(entry, 4, size=2)
             type = read_int(entry, 6, size=2)
@@ -71,11 +91,22 @@ def load_ld(filepath: Path) -> list[FileInfo]:
             if index != 0xFFFF and type & 0xFFF0 != 0x8000:
                 files.append(
                     FileInfo(
-                        index, type, ram_address, size, x, y, width, height, entry[0:4]
+                        filepath,
+                        entry_address,
+                        index,
+                        type,
+                        ram_address,
+                        size,
+                        x,
+                        y,
+                        width,
+                        height,
+                        entry[0:4],
                     )
                 )
 
             entry = f.read(LD_ENTRY_SIZE)
+            entry_address += LD_ENTRY_SIZE
 
     return files
 

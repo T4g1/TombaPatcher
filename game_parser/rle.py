@@ -59,7 +59,7 @@ def decompress(filepath: Path, outputpath: Path):
             data_index += 2
             for _ in range(amount):
                 output += value
-    print(outputpath)
+
     with open(outputpath, "wb") as output_file:
         output_file.write(output)
 

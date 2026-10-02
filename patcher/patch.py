@@ -8,6 +8,7 @@ from collections.abc import Iterator
 @dataclass
 class PatchCommand:
     file_pattern: str
+    stage: str | None
     address: int | None
     data: bytes
 
@@ -20,10 +21,33 @@ class PatchCommand:
             or self.address == other.address
         )
 
+    def apply(self, base: Path) -> set[Path]:
+        """Apply the patch command
+        Returns the list of file modified"""
+        updated = set()
+
+        pattern = f"{self.stage}/{self.file_pattern}"
+        for file in base.glob(pattern):
+            print(f"Patching {file}...")
+            if self.address is None:
+                with open(file, "wb") as f:
+                    f.write(self.data)
+            else:
+                with open(file, "r+b") as f:
+                    f.seek(self.address)
+                    f.write(self.data)
+
+            updated.add(file)
+
+        return updated
+
 
 class Target(BaseModel):
     # Targets all files matching this pattern
     pattern: str
+
+    # Which extraction stage is targetted (GAM, LD, TIM, RLE, ...)
+    stage: Optional[str] = "*"
 
     # Specific address in the matched files
     address: Optional[int] = None
@@ -41,4 +65,6 @@ class Patch(BaseModel):
             data = f.read()
 
         for target in self.targets:
-            yield PatchCommand(target.pattern, address=target.address, data=data)
+            yield PatchCommand(
+                target.pattern, stage=target.stage, address=target.address, data=data
+            )
