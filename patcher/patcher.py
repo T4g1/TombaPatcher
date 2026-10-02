@@ -3,11 +3,13 @@ from pydantic import ValidationError
 
 from game_parser.mkpsxiso import dumpsxiso, mkpsxiso
 from game_parser.fla import load_flas_with_lbas
+from game_parser.ld import ld_load_all
 from game_parser.files import unpack as files_unpack, pack as files_pack
 from game_parser.gam import ungam_all, gam_all
 from game_parser.packed import unpack_all, pack_all_files
 from game_parser.rle import decompress_all, compress_all
 from game_parser.tim import tim_to_png_all, png_to_tim_all
+from game_parser.image import extract_all, format_all
 
 from patcher.mods import Mods
 
@@ -23,6 +25,7 @@ from common import (
     MODS_PATH,
     GAM_PATH,
     ISO_PATH,
+    IMG_PATH,
 )
 
 
@@ -41,10 +44,12 @@ def patch(game: Path, output: Path):
     dumpsxiso(game, ISO_PATH)
     ungam_all(ISO_PATH, GAM_PATH)
     flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
+    infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, ENTRY_PATH, XML_PATH, GAM_PATH)
     files_unpack(ISO_PATH, LD_PATH, SYS_PATH, GAM_PATH, flas)
     unpacked_files = unpack_all(LD_PATH, PACKED_PATH)
     decompress_all(PACKED_PATH, RLE_PATH)
     tim_to_png_all(RLE_PATH, TIM_PATH)
+    extract_all(infos, IMG_PATH)
 
     try:
         updated_path = apply_mods()
@@ -52,6 +57,7 @@ def patch(game: Path, output: Path):
     except (FileNotFoundError, ValidationError) as exception:
         print(f"Unable to apply mods: {exception}")
 
+    format_all(IMG_PATH, LD_PATH, updated)
     png_to_tim_all(TIM_PATH, RLE_PATH)
     compress_all(RLE_PATH, PACKED_PATH)
     pack_all_files(PACKED_PATH, LD_PATH, unpacked_files)

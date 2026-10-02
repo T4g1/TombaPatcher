@@ -44,11 +44,8 @@ class LoadOrder(BaseModel):
 
 class Mods:
     base: Path
-    mods: list[Mod]
 
     def __init__(self, base: Path):
-        self.mods = []
-
         self.discover(base)
 
     def discover(self, base: Path):

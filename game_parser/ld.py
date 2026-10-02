@@ -1,13 +1,21 @@
 import struct
+import fnmatch
 from pathlib import Path
 from dataclasses import dataclass
 from collections.abc import Iterator
 
+from game_parser.gam import is_gam, UNGAM_SUFFIX
+
 from common import (
+    to_basepath,
+    get_suffix_from_type,
     read_int,
+    ISO_PATH,
     ENTRY_PATH,
     XML_PATH,
     SYS_PATH,
+    GAM_PATH,
+    LD_PATH,
 )
 
 from game_parser.fla import load_flas_with_lbas
@@ -37,6 +45,28 @@ class FileInfo:
 
     header: bytes = bytes()
 
+    # From which file this is taken
+    source: Path | None = None
+    dest: Path | None = None
+
+    # Increment for each file related to the same source
+    count: int = 0
+
+    def set_dest(self, to: Path) -> Path:
+        """Where this particular file is extracted from LD informations"""
+        if self.source is None:
+            raise ValueError(
+                "Cannot determine destination for this file info as it does not have a source path",
+                self,
+            )
+
+        text_suffix = get_suffix_from_type(self.type)
+
+        self.dest = to_basepath(self.source, to).with_suffix(
+            f".{self.count}.{self.type:04X}{text_suffix}"
+        )
+        return self.dest
+
 
 def group_by_file_index(files: list[FileInfo]) -> Iterator[list[FileInfo]]:
     """Yield list of files that are packed together in correct order"""
@@ -52,7 +82,7 @@ def group_by_file_index(files: list[FileInfo]) -> Iterator[list[FileInfo]]:
     yield files[last_file_start:]
 
 
-def write_ld(info: FileInfo):
+def ld_write(info: FileInfo):
     """Write back the FileInfo entry into the LD file"""
     with open(info.ld_file, "r+b") as f:
         f.seek(info.ld_address)
@@ -65,7 +95,7 @@ def write_ld(info: FileInfo):
         f.write(struct.pack("<I", 0))
 
 
-def load_ld(filepath: Path) -> list[FileInfo]:
+def ld_load(filepath: Path) -> list[FileInfo]:
     print(f"LD: Loading {filepath}")
 
     files: list[FileInfo] = []
@@ -111,30 +141,60 @@ def load_ld(filepath: Path) -> list[FileInfo]:
     return files
 
 
-if __name__ == "__main__":
-    all_types = []
+def ld_load_all(
+    base: Path,
+    to: Path,
+    sys_path: Path,
+    entry_path: Path,
+    xml_path: Path,
+    gam_path: Path,
+):
+    flas = load_flas_with_lbas(entry_path, xml_path)
+    loaded: list[FileInfo] = []
 
-    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
-
+    count = 0
     filepath = flas[0].path
 
-    for filepath in SYS_PATH.rglob("LD*.BIN"):
-        files = load_ld(filepath)
+    for file in sys_path.rglob("LD*.BIN"):
+        infos = ld_load(file)
 
-        for file in files:
-            file_type = f"{file.type:04X}"
-            if file_type not in all_types:
-                all_types.append(file_type)
+        for info in infos:
+            if info.index != 0:
+                raw_path = flas[info.index].path
+                assert raw_path
 
-            if file.index != 0:
-                filepath = flas[file.index].path
+                count = 0
+                filepath = base / raw_path
+                if is_gam(filepath):
+                    filepath = to_basepath(filepath, gam_path).with_suffix(UNGAM_SUFFIX)
 
-            print(
-                f"0x{file.index:04X}: {filepath}\t\tType 0x{file.type:04X}, "
-                f"RAM 0x{file.ram_address:08X}, Size 0x{file.size:08X} "
-                f"(s: {file.size}, w: {file.width}; h: {file.height})"
-            )
+            assert filepath
+            info.source = base / filepath
+            info.count = count
+            info.set_dest(to)
 
-    print("All file type encountered:")
-    for type in sorted(all_types):
-        print(type, end=", ")
+            loaded.append(info)
+            count += 1
+
+    return loaded
+
+
+def ld_filter(files: list[FileInfo], pattern: str) -> list[FileInfo]:
+    """Pattern is like *.1080"""
+    filtered = []
+    for info in files:
+        if info.dest is None:
+            raise ValueError("File info has no dest path", info)
+        if fnmatch.fnmatch(info.dest.name, pattern):
+            filtered.append(info)
+    return filtered
+
+
+if __name__ == "__main__":
+    files = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, ENTRY_PATH, XML_PATH, GAM_PATH)
+    for file in files:
+        print(
+            f"0x{file.index:04X}: {file.source}\t{file.dest}\t\tType 0x{file.type:04X}, "
+            f"RAM 0x{file.ram_address:08X}, Size 0x{file.size:08X} "
+            f"(s: {file.size}, w: {file.width}; h: {file.height})"
+        )

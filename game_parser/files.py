@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from game_parser.fla import load_flas_with_lbas, FLA
-from game_parser.ld import load_ld, write_ld, FileInfo
+from game_parser.ld import ld_load, ld_write, FileInfo
 from game_parser.gam import UNGAM_SUFFIX, is_gam
 
 from common import (
@@ -68,7 +68,7 @@ def save_file(
 def unpack(base: Path, to: Path, sys_path: Path, gam_path: Path, flas: dict[int, FLA]):
 
     for ld_file in SYS_PATH.rglob("LD*.BIN"):
-        files = load_ld(ld_file)
+        files = ld_load(ld_file)
 
         source_file: Path | None = None
         offset: int = 0
@@ -106,7 +106,7 @@ def unpack(base: Path, to: Path, sys_path: Path, gam_path: Path, flas: dict[int,
 
 def pack(base: Path, to: Path, sys_path: Path, gam_path: Path, flas: dict[int, FLA]):
     for ld_file in sys_path.rglob("LD*.BIN"):
-        files = load_ld(ld_file)
+        files = ld_load(ld_file)
         updated_files = []
 
         for file in files:
@@ -147,7 +147,7 @@ def pack(base: Path, to: Path, sys_path: Path, gam_path: Path, flas: dict[int, F
 
     # Update LD files
     for file in updated_files:
-        write_ld(file)
+        ld_write(file)
 
 
 if __name__ == "__main__":

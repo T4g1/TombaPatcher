@@ -10,7 +10,7 @@ from ui.clut_widget import CLUTView, ClutUpdate
 from ui.skin_preview import SkinPreview
 
 from common import GuiLogger, logger
-from patcher import PatchWorker, PatchCommand
+from fe.worker.patcher import PatchWorker, PatchCommand
 from game_parser.vram import to_16bit_color, Pixel
 
 

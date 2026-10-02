@@ -1,15 +1,15 @@
 import shutil
 from tests import get_path
 
-from game_parser.ld import load_ld, write_ld, FileInfo
+from game_parser.ld import ld_load, ld_write, FileInfo
 
 LD_DIR = "ld"
 LD_FILE = "LDAR18.BIN"
 
 
-def test_load_ld():
+def test_ld_load():
     file = get_path(LD_DIR) / LD_FILE
-    files = load_ld(file)
+    files = ld_load(file)
 
     assert len(files) == 39
 
@@ -23,7 +23,7 @@ def test_load_ld():
     assert info.type == 0x39FF
 
 
-def test_write_ld(tmp_path):
+def test_ld_write(tmp_path):
     file = tmp_path / LD_FILE
 
     shutil.copy(get_path(LD_DIR) / LD_FILE, file)
@@ -43,9 +43,9 @@ def test_write_ld(tmp_path):
             header=bytes(4),
         )
 
-        write_ld(info_changed)
+        ld_write(info_changed)
 
-        results = load_ld(file)
+        results = ld_load(file)
 
         info_result = results[index]
         assert info_changed.ld_address == info_result.ld_address

@@ -24,6 +24,8 @@ XML_PATH = OUTPUT_PATH / "tomba.xml"
 ENTRY_PATH = ISO_PATH / "SCUS_942.36"
 SYS_PATH = ISO_PATH / "SYS"
 
+PNG_SUFFIX = ".PNG"
+
 
 PATTERN_TO_SUFFIX: dict[int, str] = {
     0xD1FF: ".WFM",
@@ -76,3 +78,8 @@ def to_basepath(oldpath: Path, basepath: Path) -> Path:
 def rglob(path: Path, patterns: list[str]) -> list[Path]:
     """Multi pattern rglob"""
     return [file for pattern in patterns for file in path.rglob(pattern)]
+
+
+def is_matching(path: Path, matching: list[str]):
+    stem = path.name.split(".")[0]
+    return len(matching) == 0 or stem in matching

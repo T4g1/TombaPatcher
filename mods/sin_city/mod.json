@@ -1,0 +1,16 @@
+{
+    "name": "Sin City",
+    "description": "Welcome to greyscale world",
+    "version": "0.0.1",
+    "patchs": [
+        {
+            "file": "CLUT.PNG",
+            "targets": [
+                {
+                    "stage": "img",
+                    "pattern": "AREA*/CLUT*.PNG"
+                }
+            ]
+        }
+    ]
+}

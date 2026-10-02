@@ -8,6 +8,7 @@ from game_parser.vram import get_from_16bit_color, COLOR_SIZE
 from common import (
     all,
     to_basepath,
+    PNG_SUFFIX,
     RLE_PATH,
     TIM_PATH,
 )
@@ -185,11 +186,11 @@ def png_to_tim(filepath: Path, outputpath: Path):
 
 def tim_to_png_all(source: Path, to: Path):
     for file in source.rglob(all(TIM_SUFFIX)):
-        tim_to_png(file, to_basepath(file, to).with_suffix(".PNG"))
+        tim_to_png(file, to_basepath(file, to).with_suffix(PNG_SUFFIX))
 
 
 def png_to_tim_all(source: Path, to: Path):
-    for file in source.rglob(all(".PNG")):
+    for file in source.rglob(all(PNG_SUFFIX)):
         png_to_tim(file, to_basepath(file, to).with_suffix(TIM_SUFFIX))
 
 

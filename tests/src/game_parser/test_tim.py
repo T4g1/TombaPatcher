@@ -2,13 +2,11 @@ import filecmp
 
 from tests import get_path
 
-from common import all, to_basepath
+from common import all, to_basepath, PNG_SUFFIX
 
 from game_parser.tim import TIM_SUFFIX, tim_to_png, png_to_tim
 
 TIM_DIR = "tim"
-
-PNG_SUFFIX = ".PNG"
 
 
 def test_tim_to_png(tmp_path):

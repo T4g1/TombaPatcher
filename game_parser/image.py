@@ -2,21 +2,30 @@ from pathlib import Path
 import struct
 from PIL import Image
 
-from game_parser.fla import load_flas_with_lbas
-from game_parser.ld import load_ld
-from game_parser.files import get_suffix_from_type
-from game_parser.vram import get_grayscale_color, get_from_16bit_color
+from game_parser.ld import FileInfo, ld_load_all, ld_filter
+from game_parser.vram import (
+    get_grayscale_color,
+    get_from_16bit_color,
+    to_16bit_color,
+    Pixel,
+)
 from game_parser.clut import load_clut
 
 from common import (
+    all,
     to_basepath,
-    ISO_PATH,
-    ENTRY_PATH,
-    XML_PATH,
-    SYS_PATH,
+    is_matching,
+    PNG_SUFFIX,
     IMG_PATH,
     LD_PATH,
+    SYS_PATH,
+    ENTRY_PATH,
+    XML_PATH,
+    ISO_PATH,
+    GAM_PATH,
 )
+
+IMG_SUFFIX = ".1080"
 
 
 def get_mode(filename: Path):
@@ -51,7 +60,7 @@ def parse_img(
     elif bpp_mode == 1:  # 8-bit
         width = width * 2
     elif bpp_mode == 2:  # 16-bit direct color (2 bytes = 1 pixel)
-        height = height // 2
+        width = width
     else:
         return None, 0
 
@@ -91,17 +100,77 @@ def parse_img(
 
 
 def extract_img(filepath: Path, outputpath: Path, width: int, height: int, mode: int):
+    print(f"IMG: Extracting {filepath} to {outputpath}...")
     with open(filepath, "rb") as f:
         data = f.read()
 
     img, _ = parse_img(data, width, height, mode)
-    if img:
-        outputpath = outputpath.with_suffix(f".mode{mode}.PNG")
-        img.save(outputpath)
-        print(f"Extracted image to {outputpath}")
+    assert img
+
+    img.save(outputpath)
+
+
+def format_img(file: Path, to: Path):
+    print(f"IMG: Formating image {file} to {to}...")
+    img = Image.open(file)
+
+    output = bytes()
+    for y in range(img.height):
+        for x in range(img.width):
+            color = img.getpixel((x, y))
+            assert isinstance(color, tuple)
+
+            if len(color) == 2:
+                # Greyscale, Alpha
+                value = to_16bit_color(
+                    Pixel(
+                        color[0],
+                        color[0],
+                        color[0],
+                        color[1],
+                    )
+                )
+            else:
+                value = to_16bit_color(
+                    Pixel(
+                        color[0],
+                        color[1],
+                        color[2],
+                        color[3] if len(color) > 3 else 255,
+                    )
+                )
+
+            output += struct.pack("<H", value)
+
+    with open(to, "wb") as f:
+        f.write(output)
+
+
+def extract_all(files: list[FileInfo], to: Path):
+    """List of files infos filtered or not"""
+    for file in ld_filter(files, all(IMG_SUFFIX)):
+        assert file.dest
+
+        mode = 0
+        if "CLUT" in file.dest.name:
+            mode = 2
+
+        # Adds two suffix
+        output = to_basepath(file.dest, to).with_suffix(
+            f"{file.dest.suffix}.mode{mode}{PNG_SUFFIX}"
+        )
+        extract_img(file.dest, output, file.width, file.height, mode)
+
+
+def format_all(base: Path, to: Path, matching: list[str] = []):
+    for file in base.rglob(all(PNG_SUFFIX)):
+        if is_matching(file, matching):
+            # Remove two suffix
+            format_img(file, to_basepath(file, to).with_suffix("").with_suffix(""))
 
 
 def extract_with_clut():
+    # TODO: Clean this
     cluts = [
         ("CLUT01", 16, 16),
         ("CLUT02", 16, 16),
@@ -136,57 +205,7 @@ def extract_with_clut():
 
 
 if __name__ == "__main__":
-    pattern = "1080"
-
-    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
-
-    for ldpath in SYS_PATH.rglob("LD*.BIN"):
-        print(f"Load LD: {ldpath}...")
-        files = load_ld(ldpath)
-
-        filepath: Path | None = None
-        offset: int = 0
-        file_count: int = 0
-        for file in files:
-            if file.index != 0:
-                offset = 0
-                file_count = 0
-                fla = flas[file.index]
-
-                assert fla.path
-                filepath = ISO_PATH / fla.path
-
-                if filepath.suffix == ".GAM":
-                    unpackedpath = Path("output/unpacked") / filepath.parent.name
-                    unpackedpath.mkdir(parents=True, exist_ok=True)
-                    unpackedpath = unpackedpath / filepath.name
-
-                    filepath = unpackedpath
-
-            assert filepath
-
-            type_suffix = f"{file.type:04X}"
-            text_suffix = get_suffix_from_type(file.type)
-
-            processedpath = to_basepath(filepath, LD_PATH).with_suffix(
-                f".{file_count}.{file.type:04X}{text_suffix}"
-            )
-
-            if file.width > 0 and file.height > 0:
-                outputpath = to_basepath(processedpath, IMG_PATH).with_suffix(".PNG")
-
-                print(f"Extracting {processedpath} to {outputpath}...")
-
-                mode = get_mode(processedpath)
-
-                if file.height == 1:
-                    file.height = 2
-                    mode = 2
-
-                print(
-                    f"Parameters: w:{file.width}, h:{file.height}, mode:{mode} - x:0x{file.x:04X}, y:0x{file.y:04X}, header:{file.header.hex()}"
-                )
-                extract_img(processedpath, outputpath, file.width, file.height, mode)
-
-            file_count += 1
-            offset += file.size
+    infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, ENTRY_PATH, XML_PATH, GAM_PATH)
+    files = ld_filter(infos, all(IMG_SUFFIX))
+    extract_all(files, IMG_PATH)
+    format_all(IMG_PATH, LD_PATH)
