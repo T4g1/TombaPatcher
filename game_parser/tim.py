@@ -112,9 +112,9 @@ def tim_to_png(filepath: Path, outputpath: Path):
             color = get_from_16bit_color(value)
 
             if color[3] == 0:
-                palettes.append((0, 0, 0, 0))
+                palettes.extend((0, 0, 0, 0))
             else:
-                palettes.append((color[0], color[1], color[2], 255))
+                palettes.extend((color[0], color[1], color[2], 255))
 
         current_ptr += clut_length
 

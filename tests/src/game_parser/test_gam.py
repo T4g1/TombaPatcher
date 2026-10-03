@@ -21,7 +21,7 @@ def test_gam_all_filtered(tmp_path):
     base = get_path(GAM_DIR)
     sources = [file for file in base.rglob(all(GAM_SUFFIX))]
 
-    gam_all(base, tmp_path, ["A001"])
+    gam_all(base, tmp_path, ["AREA00/A001"])
 
     results = [file for file in tmp_path.rglob(all(GAM_SUFFIX))]
 

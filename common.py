@@ -28,10 +28,27 @@ PNG_SUFFIX = ".PNG"
 
 
 PATTERN_TO_SUFFIX: dict[int, str] = {
-    0xD1FF: ".WFM",
-    0x60FF: ".RLE.PAK",
-    0x62FF: ".RLE.PAK",
+    # VRAM Shard
+    0x10FF: ".GRPX",
+    0x11FF: ".GRPX",
+    0x1080: ".GRPX",
+    # 3D Models
     0x5080: ".PAK",
+    0x50FF: ".PAK",
+    0x51FF: ".PAK",
+    0x52FF: ".PAK",
+    0x53FF: ".PAK",
+    0x54FF: ".PAK",
+    0x55FF: ".PAK",
+    # Tomba! or Red Kokka sprites
+    0x6080: ".RLE.PAK",
+    0x60FF: ".RLE.PAK",
+    0x6280: ".RLE.PAK",
+    0x62FF: ".RLE.PAK",
+    0x63FF: ".TIM.GAM.PAK",
+    # Text/Dialogs
+    0xD0FF: ".WFM",
+    0xD1FF: ".WFM",  # Events
 }
 
 

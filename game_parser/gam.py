@@ -2,7 +2,7 @@ import struct
 
 from pathlib import Path
 
-from common import logger, all, to_basepath, is_matching, ISO_PATH
+from common import logger, all, to_basepath, is_matching
 
 GAM_SUFFIX = ".GAM"
 UNGAM_SUFFIX = ".000"
@@ -158,5 +158,5 @@ def gam_all(base: Path, to: Path, matching: list[str] = []):
 
 
 if __name__ == "__main__":
-    for path in ISO_PATH.rglob(all(GAM_SUFFIX)):
+    for path in Path("debug").rglob(all(GAM_SUFFIX)):
         ungam(path, path.with_suffix(UNGAM_SUFFIX))

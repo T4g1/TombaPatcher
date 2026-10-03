@@ -1,6 +1,6 @@
 """
 Format:
-Header:
+Header: (absent for 63FF files)
 * Count: 4 bytes: Amount of entry packed
 
 Entries:
@@ -45,15 +45,19 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
         data = f.read()
 
     entry_index = 0
+    offset = 4
 
     entry_count = read_int(data, 0, size=4)
-
     first_offset = read_int(data, 4, size=4)
+
+    if ".63FF" in str(filepath):
+        first_offset = entry_count
+        entry_count = -1  # Unknown
+        offset = 0
 
     # End is sometimes at -3, sometimes -1...
     end_threshold = len(data) - 3
 
-    offset = 4
     while offset < first_offset:
         data_start = read_int(data, offset, size=4)
         data_end = len(data)
@@ -61,7 +65,12 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
             data_end = read_int(data, offset + 4, size=4)
 
         if data_start >= end_threshold:
-            assert entry_index == entry_count
+            if ".63FF":
+                entry_count = entry_index + 1
+
+            assert (
+                entry_index + 1 == entry_count
+            ), "Reached end of the address table but entry count do not match"
             break
 
         if data_end >= end_threshold:
@@ -92,14 +101,16 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
 
         results.append(outputpath)
         entry_index += 1
-        offset = 4 + entry_index * 4
+        offset += 4
 
     return results
 
 
 def pack(inputdirectory: Path, outputpath: Path):
     """Packing file in a given directory to a given path
-    Packed files must match the pattern implied by the output filename"""
+    Packed files must match the pattern implied by the output filename
+    input: base /
+    output: base / packed / subdirectory / file"""
     logger.info(f"Packed: Re-packing to {outputpath}...")
 
     suffix = Path(outputpath.stem).suffix

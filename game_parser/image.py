@@ -27,7 +27,7 @@ from common import (
     GAM_PATH,
 )
 
-IMG_SUFFIX = ".1080"
+GRPX_SUFFIX = ".GRPX"
 
 
 def get_mode(filename: Path):
@@ -150,7 +150,7 @@ def format_img(file: Path, to: Path):
 
 def extract_all(files: list[FileInfo], to: Path):
     """List of files infos filtered or not"""
-    for file in ld_filter(files, all(IMG_SUFFIX)):
+    for file in ld_filter(files, all(GRPX_SUFFIX)):
         assert file.dest
 
         mode = 0
@@ -158,16 +158,14 @@ def extract_all(files: list[FileInfo], to: Path):
             mode = 2
 
         # Adds two suffix
-        output = to_basepath(file.dest, to).with_suffix(
-            f"{file.dest.suffix}.mode{mode}{PNG_SUFFIX}"
-        )
+        output = to_basepath(file.dest, to).with_suffix(f".mode{mode}{PNG_SUFFIX}")
         extract_img(file.dest, output, file.width, file.height, mode)
 
 
 def format_all(base: Path, to: Path, matching: list[str] = []):
     for file in base.rglob(all(PNG_SUFFIX)):
         if is_matching(file, matching):
-            # Remove two suffix
+            # Remove the added suffixes
             format_img(file, to_basepath(file, to).with_suffix("").with_suffix(""))
 
 
@@ -209,6 +207,6 @@ def extract_with_clut():
 if __name__ == "__main__":
     flas = flas_load_with_lbas(ENTRY_PATH, XML_PATH)
     infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, flas, GAM_PATH)
-    files = ld_filter(infos, all(IMG_SUFFIX))
+    files = ld_filter(infos, all(GRPX_SUFFIX))
     extract_all(files, IMG_PATH)
-    format_all(IMG_PATH, LD_PATH)
+    # format_all(IMG_PATH, LD_PATH)

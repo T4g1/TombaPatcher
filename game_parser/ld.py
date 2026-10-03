@@ -88,12 +88,12 @@ def ld_write(info: FileInfo):
         f.seek(info.ld_address + 12)
         ld_size = struct.unpack("<I", f.read(4))[0]
 
-        assert info.dest
+        dest = info.dest if info.dest is not None else ""
 
         logger.info(
             (
                 f"LD: Write {info.ld_file} at {info.ld_address}. "
-                f"{info.source}->{info.dest} changed: size {ld_size:04X} to {info.size:04X}..."
+                f"{info.source}->{dest} changed: size {ld_size:04X} to {info.size:04X}..."
             )
         )
 

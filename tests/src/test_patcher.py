@@ -2,7 +2,7 @@ import filecmp
 
 from tests import get_path
 
-from game_parser.image import format_img, extract_img, IMG_SUFFIX
+from game_parser.image import format_img, extract_img, GRPX_SUFFIX
 from game_parser.files import save_file, load_file
 from game_parser.ld import FileInfo
 from game_parser.gam import UNGAM_SUFFIX, GAM_SUFFIX, gam, ungam
@@ -33,7 +33,7 @@ def test_patcher(tmp_path):
     gam(ld_file, gam_file)
 
     rev_ld_file = ld_file.with_suffix(".rev" + UNGAM_SUFFIX)
-    rev_formated_file = formated.with_suffix(".rev" + IMG_SUFFIX)
+    rev_formated_file = formated.with_suffix(".rev" + GRPX_SUFFIX)
     rev_img_file = to_basepath(img, tmp_path).with_suffix(".rev.PNG")
 
     # GAM to LD

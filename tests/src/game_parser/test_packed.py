@@ -41,10 +41,10 @@ def test_unpack_5080(tmp_path: Path):
 
 def test_pack_rle(tmp_path: Path):
     path = get_path(PACKED_RLE_FILE)
-    result = tmp_path / path.name
+    result = tmp_path / PACKED_DIR / path.name
 
     unpack(path, tmp_path)
-    pack(tmp_path / "packed", result)
+    pack(tmp_path, result)
 
     # Some of the RLE files have the last offset close to the end with
     # 0 to 3 bytes offset
@@ -58,10 +58,10 @@ def test_pack_rle(tmp_path: Path):
 
 def test_pack_5080(tmp_path: Path):
     path = get_path(PACKED_5080_FILE)
-    result = tmp_path / path.name
+    result = tmp_path / PACKED_DIR / path.name
 
     unpack(path, tmp_path)
-    pack(tmp_path / "packed", result)
+    pack(tmp_path, result)
 
     assert filecmp.cmp(path, result, shallow=False), "Packed and re-packed file differs"
 
