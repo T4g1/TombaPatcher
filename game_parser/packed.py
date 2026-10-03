@@ -20,6 +20,7 @@ from pathlib import Path
 from game_parser.rle import RLE_SUFFIX
 
 from common import (
+    logger,
     all,
     read_int,
     to_basepath,
@@ -36,7 +37,7 @@ def get_path_packed(base: Path) -> Path:
 
 def unpack(filepath: Path, basepath: Path) -> list[Path]:
     """Unpacking file to a given directory"""
-    print(f"Packed: Unpacking {filepath}...")
+    logger.info(f"Packed: Unpacking {filepath}...")
 
     results = []
 
@@ -84,7 +85,7 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
         outputpath = to_basepath(filepath, basepath).with_name(
             f"{base_stem}.{entry_index:04X}{suffix}"
         )
-        print(f"Unpacking {outputpath} of size: {size}...")
+        logger.info(f"Unpacking {outputpath} of size: {size}...")
 
         with open(outputpath, "wb") as f:
             f.write(data[data_start:data_end])
@@ -99,7 +100,7 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
 def pack(inputdirectory: Path, outputpath: Path):
     """Packing file in a given directory to a given path
     Packed files must match the pattern implied by the output filename"""
-    print(f"Packed: Re-packing to {outputpath}...")
+    logger.info(f"Packed: Re-packing to {outputpath}...")
 
     suffix = Path(outputpath.stem).suffix
     base_stem = Path(outputpath.stem).stem

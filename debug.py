@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from common import logger
+
 
 def find_binary():
     needle = bytes.fromhex("0ff002ff140ff002ff0f1400")
@@ -10,8 +12,9 @@ def find_binary():
 
         result = data.find(needle)
         if result > 0:
-            print(file, f"{result:08X}")
+            logger.info(file, f"{result:08X}")
 
 
 if __name__ == "__main__":
+    logger.info("test")
     find_binary()

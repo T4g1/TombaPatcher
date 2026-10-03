@@ -14,6 +14,7 @@ from game_parser.image import extract_all, format_all
 from patcher.mods import Mods
 
 from common import (
+    logger,
     to_matching_token,
     OUTPUT_PATH,
     ENTRY_PATH,
@@ -56,7 +57,7 @@ def patch(game: Path, output: Path):
         updated_path = apply_mods()
         updated_tokens = [to_matching_token(path) for path in updated_path]
     except (FileNotFoundError, ValidationError) as exception:
-        print(f"Unable to apply mods: {exception}")
+        logger.info(f"Unable to apply mods: {exception}")
 
     format_all(IMG_PATH, LD_PATH, updated_tokens)
     png_to_tim_all(TIM_PATH, RLE_PATH)

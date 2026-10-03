@@ -6,6 +6,7 @@ from PIL import Image
 from game_parser.vram import get_from_16bit_color, COLOR_SIZE
 
 from common import (
+    logger,
     all,
     to_basepath,
     PNG_SUFFIX,
@@ -75,7 +76,7 @@ def tim_to_png(filepath: Path, outputpath: Path):
     Parses a single TIM image from a binary data buffer at a given offset.
     Returns (Image object, total_bytes_consumed) or (None, 0) if invalid.
     """
-    print(f"TIM: Extracting {filepath}...")
+    logger.info(f"TIM: Extracting {filepath}...")
 
     with open(filepath, "rb") as f:
         data = f.read()
@@ -159,7 +160,7 @@ def png_to_tim(filepath: Path, outputpath: Path):
     total_bytes = img.width * img.height // pixel_per_byte
     bytes_per_line = img.width // pixel_per_byte
 
-    # print(f"Size:({img.width}, {img.height}), bytes:{total_bytes}")
+    # logger.info(f"Size:({img.width}, {img.height}), bytes:{total_bytes}")
 
     for i in range(total_bytes):
         x = i % bytes_per_line * pixel_per_byte

@@ -5,6 +5,7 @@ from game_parser.ld import ld_load_all, FileInfo
 from game_parser.gam import UNGAM_SUFFIX, is_gam
 
 from common import (
+    logger,
     to_basepath,
     get_suffix_from_type,
     ISO_PATH,
@@ -17,7 +18,7 @@ from common import (
 
 
 def load_file(filepath: Path, outputpath: Path, info: FileInfo, offset: int):
-    print(
+    logger.info(
         f"Loading {outputpath}: file 0x{info.index:03X} of type 0x{info.type:04X} at {offset} of size {info.size}..."
     )
 
@@ -38,7 +39,7 @@ def save_file(
 ) -> bool:
     """Returns True if the file saved differs from the given file info
     In which case, the file info is updated with the new value"""
-    print(
+    logger.info(
         f"Saving {outputpath}: 0x{info.index:03X} of type 0x{info.type:04X} at {offset} of size {info.size}..."
     )
 
@@ -80,7 +81,7 @@ def unpack(
             assert fla.path
             source_file = base / fla.path
 
-            print(f"Loading from: {source_file}...")
+            logger.info(f"Loading from: {source_file}...")
 
             if is_gam(source_file):
                 # Assume UNGAM is already done

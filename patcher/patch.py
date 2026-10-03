@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from dataclasses import dataclass
 from collections.abc import Iterator
 
+from common import logger
+
 
 @dataclass
 class PatchCommand:
@@ -28,7 +30,7 @@ class PatchCommand:
 
         pattern = f"{self.stage}/{self.file_pattern}"
         for file in base.glob(pattern):
-            print(f"Patching {file}...")
+            logger.info(f"Patching {file}...")
             if self.address is None:
                 with open(file, "wb") as f:
                     f.write(self.data)

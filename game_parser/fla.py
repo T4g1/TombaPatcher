@@ -3,7 +3,7 @@ import struct
 from pathlib import Path
 from dataclasses import dataclass
 
-from common import bcd_to_int
+from common import logger, bcd_to_int
 
 from game_parser.lba import load_lbas
 
@@ -21,6 +21,8 @@ class FLA:
 
 
 def load_flas(mainpath: Path) -> dict[int, FLA]:
+    logger.info("FLA: Loading")
+
     flas: dict[int, FLA] = {}
 
     with open(mainpath, "rb") as f:
@@ -46,13 +48,10 @@ def load_flas(mainpath: Path) -> dict[int, FLA]:
 
 
 def flas_load_with_lbas(mainpath: Path, xmlpath: Path):
-    print("Load LBA...")
     lbas = load_lbas(xmlpath)
-
-    print("Load LFA...")
     flas = load_flas(mainpath)
 
-    print("Merging LBA and FLA")
+    logger.info("Merging LBA and FLA")
     for fla in flas.values():
         fla.path = lbas[fla.lba]
 
@@ -69,7 +68,7 @@ def flas_update(base: Path, mainpath: Path, flas: dict[int, FLA]):
             original_size = struct.unpack("<I", f.read(4))[0]
 
             if size != original_size:
-                print(f"FLA: Write {fla.path}: {original_size:04X} to {size:04X}")
+                logger.info(f"FLA: Write {fla.path}: {original_size:04X} to {size:04X}")
 
                 f.seek(FLA_ADDRESS + (index * FLA_ENTRY_SIZE) + 4)
                 f.write(struct.pack("<I", size))
@@ -80,4 +79,4 @@ if __name__ == "__main__":
     flas = load_flas(mainpath)
 
     for index, fla in flas.items():
-        print(f"0x{index:04X}: {fla.lba}\t{fla.size}")
+        logger.info(f"0x{index:04X}: {fla.lba}\t{fla.size}")

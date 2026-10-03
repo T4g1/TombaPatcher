@@ -1,8 +1,9 @@
-from collections import defaultdict
 from dataclasses import dataclass
 
 from PySide6.QtCore import QThread, Signal
 from pathlib import Path
+
+from patcher.patcher import patch
 
 OUTPUT_FILES = "output/files"
 
@@ -28,33 +29,13 @@ class PatchWorker(QThread):
         super().__init__()
 
         self.filepath = Path(filepath)
-        self.extractpath = Path(OUTPUT_FILES)
         self.outputpath = (
             self.filepath.parent / f"{self.filepath.stem}.patched{self.filepath.suffix}"
         )
 
-        self.patch_commands = patches
-
     def run(self):
-        # TODO
-        pass
-
-    def filter_files(self, path: Path, pattern: str) -> list[Path]:
-        """List all files in given directory that match given pattern"""
-        return [file for file in path.rglob(pattern) if file.is_file()]
-
-    def patch_files(self, path: Path):
-        """Group commands by file and delegates patch application commands"""
-        file_to_commands = defaultdict(list)
-
-        for command in self.patch_commands:
-            matching_files = self.filter_files(path, command.file_pattern)
-            for target_file in matching_files:
-                file_to_commands[target_file].append(command)
-
-        for target_file, target_commands in file_to_commands.items():
-            self.patch(target_file, target_commands)
-
-    def patch(self, target_file: Path, commands: list[PatchCommand]):
-        # TODO
-        pass
+        try:
+            patch(self.filepath, self.outputpath)
+            self.finished.emit(True, "Game successfully patched !")
+        except Exception as exception:
+            self.finished.emit(False, f"Error during patching process: {exception}")

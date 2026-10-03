@@ -2,13 +2,13 @@ import subprocess
 
 from pathlib import Path
 
-from common import ISO_PATH, XML_PATH
+from common import logger, ISO_PATH, XML_PATH
 
 
 def dumpsxiso(filepath: Path, destination: Path):
     """Given a ISO or BIN/CUE file:
     Extracts all files from it"""
-    print(f"ISO/BIN: Dumping to {destination}...")
+    logger.info(f"ISO/BIN: Dumping to {destination}...")
 
     cmd = [
         "dumpsxiso",
@@ -29,7 +29,7 @@ def dumpsxiso(filepath: Path, destination: Path):
 def mkpsxiso(outputpath: Path) -> Path:
     """Given a list of files:
     Pack a ISO or BIN/CUE form them"""
-    print(f"ISO/BIN: Constructing {outputpath}...")
+    logger.info(f"ISO/BIN: Constructing {outputpath}...")
 
     suffix = ".bin"
     if outputpath.suffix == ".iso":

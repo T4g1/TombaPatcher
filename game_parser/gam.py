@@ -2,7 +2,7 @@ import struct
 
 from pathlib import Path
 
-from common import all, to_basepath, is_matching, ISO_PATH
+from common import logger, all, to_basepath, is_matching, ISO_PATH
 
 GAM_SUFFIX = ".GAM"
 UNGAM_SUFFIX = ".000"
@@ -20,7 +20,7 @@ def ungam(filepath: Path, outputpath: Path, offset: int = 0):
     """
     Decompresses a GAM file and writes the uncompressed data to disk.
     """
-    print(f"GAM: Decompressing to {outputpath}...")
+    logger.info(f"GAM: Decompressing to {outputpath}...")
 
     with open(filepath, "rb") as f:
         f.seek(offset)
@@ -71,7 +71,7 @@ def ungam(filepath: Path, outputpath: Path, offset: int = 0):
 
 
 def gam(filepath: Path, outputpath: Path):
-    print(f"GAM: Compressing to {outputpath}...")
+    logger.info(f"GAM: Compressing to {outputpath}...")
 
     output = bytearray()
 

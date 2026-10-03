@@ -3,6 +3,7 @@ import struct
 from PIL import Image
 
 from game_parser.ld import FileInfo, ld_load_all, ld_filter
+from game_parser.fla import flas_load_with_lbas
 from game_parser.vram import (
     get_grayscale_color,
     get_from_16bit_color,
@@ -12,6 +13,7 @@ from game_parser.vram import (
 from game_parser.clut import load_clut
 
 from common import (
+    logger,
     all,
     to_basepath,
     is_matching,
@@ -100,7 +102,7 @@ def parse_img(
 
 
 def extract_img(filepath: Path, outputpath: Path, width: int, height: int, mode: int):
-    print(f"IMG: Extracting {filepath} to {outputpath}...")
+    logger.info(f"IMG: Extracting {filepath} to {outputpath}...")
     with open(filepath, "rb") as f:
         data = f.read()
 
@@ -111,7 +113,7 @@ def extract_img(filepath: Path, outputpath: Path, width: int, height: int, mode:
 
 
 def format_img(file: Path, to: Path):
-    print(f"IMG: Formating image {file} to {to}...")
+    logger.info(f"IMG: Formating image {file} to {to}...")
     img = Image.open(file)
 
     output = bytes()
@@ -205,7 +207,8 @@ def extract_with_clut():
 
 
 if __name__ == "__main__":
-    infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, ENTRY_PATH, XML_PATH, GAM_PATH)
+    flas = flas_load_with_lbas(ENTRY_PATH, XML_PATH)
+    infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, flas, GAM_PATH)
     files = ld_filter(infos, all(IMG_SUFFIX))
     extract_all(files, IMG_PATH)
     format_all(IMG_PATH, LD_PATH)

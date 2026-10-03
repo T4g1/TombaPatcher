@@ -1,11 +1,15 @@
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+from common import logger
+
 
 def load_lbas(xmlpath: Path) -> dict[int, str]:
     """
     Parses a mkpsxiso XML configuration to extract Logical Block Addresses (LBA)
     """
+    logger.info("LBA: Loading")
+
     lbas: dict[int, str] = {}
 
     tree = ET.parse(xmlpath)
@@ -45,4 +49,4 @@ if __name__ == "__main__":
     lbas = load_lbas(Path("output/tomba.xml"))
 
     for address, path in lbas.items():
-        print(f"{address}: {path}")
+        logger.info(f"{address}: {path}")

@@ -5,8 +5,10 @@ from dataclasses import dataclass
 from collections.abc import Iterator
 
 from game_parser.gam import is_gam, UNGAM_SUFFIX
+from game_parser.fla import FLA, flas_load_with_lbas
 
 from common import (
+    logger,
     to_basepath,
     get_suffix_from_type,
     read_int,
@@ -17,8 +19,6 @@ from common import (
     GAM_PATH,
     LD_PATH,
 )
-
-from game_parser.fla import FLA, flas_load_with_lbas
 
 LD_ENTRY_SIZE = 0x14
 
@@ -90,7 +90,7 @@ def ld_write(info: FileInfo):
 
         assert info.dest
 
-        print(
+        logger.info(
             (
                 f"LD: Write {info.ld_file} at {info.ld_address}. "
                 f"{info.source}->{info.dest} changed: size {ld_size:04X} to {info.size:04X}..."
@@ -108,7 +108,7 @@ def ld_write(info: FileInfo):
 
 
 def ld_load(filepath: Path) -> list[FileInfo]:
-    print(f"LD: Loading {filepath}")
+    logger.info(f"LD: Loading {filepath}")
 
     files: list[FileInfo] = []
 
@@ -207,7 +207,7 @@ if __name__ == "__main__":
     files = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, flas, GAM_PATH)
     for file in files:
         if "AREA00" in str(file.source):
-            print(
+            logger.info(
                 f"0x{file.index:04X}: {file.source}\t{file.dest}\t\tType 0x{file.type:04X}, "
                 f"RAM 0x{file.ram_address:08X}, Size 0x{file.size:08X} "
                 f"(s: {file.size}, w: {file.width}; h: {file.height})"

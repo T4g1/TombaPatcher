@@ -3,6 +3,7 @@ from pathlib import Path
 from game_parser.tim import TIM_SUFFIX, TIM_HEADER
 
 from common import (
+    logger,
     all,
     to_basepath,
     RLE_PATH,
@@ -18,7 +19,7 @@ def decompress(filepath: Path, outputpath: Path):
     """
     Decompresses a RLE file and writes the uncompressed data to disk.
     """
-    print(f"RLE: Decompressing {filepath}...")
+    logger.info(f"RLE: Decompressing {filepath}...")
 
     with open(filepath, "rb") as f:
         data = f.read()
@@ -65,7 +66,7 @@ def decompress(filepath: Path, outputpath: Path):
 
 
 def compress(filepath: Path, outputpath: Path):
-    print(f"RLE: Compressing {filepath}...")
+    logger.info(f"RLE: Compressing {filepath}...")
 
     with open(filepath, "rb") as f:
         f.seek(len(TIM_HEADER))
