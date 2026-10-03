@@ -104,7 +104,7 @@ def pack(inputdirectory: Path, outputpath: Path):
     suffix = Path(outputpath.stem).suffix
     base_stem = Path(outputpath.stem).stem
 
-    pattern = f"{base_stem}.*{suffix}"
+    pattern = f"{outputpath.parent.name}/{base_stem}.*{suffix}"
 
     # 5080 files does not have the last entry being the EOF address
     with_eof = suffix != ".5080"

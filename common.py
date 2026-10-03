@@ -81,5 +81,9 @@ def rglob(path: Path, patterns: list[str]) -> list[Path]:
 
 
 def is_matching(path: Path, matching: list[str]):
-    stem = path.name.split(".")[0]
-    return len(matching) == 0 or stem in matching
+    token = to_matching_token(path)
+    return len(matching) == 0 or token in matching
+
+
+def to_matching_token(path: Path):
+    return f"{path.parent.name}/{path.name.split(".")[0]}"

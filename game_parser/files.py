@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from game_parser.fla import load_flas_with_lbas, FLA
-from game_parser.ld import ld_load, ld_write, FileInfo
+from game_parser.fla import flas_load_with_lbas, FLA
+from game_parser.ld import ld_load_all, FileInfo
 from game_parser.gam import UNGAM_SUFFIX, is_gam
 
 from common import (
@@ -65,92 +65,89 @@ def save_file(
     return info_changed
 
 
-def unpack(base: Path, to: Path, sys_path: Path, gam_path: Path, flas: dict[int, FLA]):
+def unpack(
+    base: Path, to: Path, files: list[FileInfo], gam_path: Path, flas: dict[int, FLA]
+):
+    source_file: Path | None = None
+    offset: int = 0
+    file_count: int = 0
+    for file in files:
+        if file.index != 0:
+            offset = 0
+            file_count = 0
+            fla = flas[file.index]
 
-    for ld_file in SYS_PATH.rglob("LD*.BIN"):
-        files = ld_load(ld_file)
+            assert fla.path
+            source_file = base / fla.path
 
-        source_file: Path | None = None
-        offset: int = 0
-        file_count: int = 0
-        for file in files:
-            if file.index != 0:
-                offset = 0
-                file_count = 0
-                fla = flas[file.index]
+            print(f"Loading from: {source_file}...")
 
-                assert fla.path
-                source_file = base / fla.path
+            if is_gam(source_file):
+                # Assume UNGAM is already done
+                source_file = to_basepath(source_file, gam_path).with_suffix(
+                    UNGAM_SUFFIX
+                )
 
-                print(f"Loading from: {source_file}...")
+        assert source_file
 
-                if is_gam(source_file):
-                    # Assume UNGAM is already done
-                    source_file = to_basepath(source_file, gam_path).with_suffix(
-                        UNGAM_SUFFIX
-                    )
+        text_suffix = get_suffix_from_type(file.type)
 
-            assert source_file
+        output_path = to_basepath(source_file, to).with_suffix(
+            f".{file_count}.{file.type:04X}{text_suffix}"
+        )
 
-            text_suffix = get_suffix_from_type(file.type)
+        load_file(source_file, output_path, file, offset)
 
-            output_path = to_basepath(source_file, to).with_suffix(
+        file_count += 1
+        offset += file.size
+
+
+def pack(
+    base: Path, to: Path, files: list[FileInfo], gam_path: Path, flas: dict[int, FLA]
+) -> list[FileInfo]:
+    """Re-construct each file info into the corresponding LD entry
+    Returns a list of FileInfo entries that have changed"""
+    updates = []
+
+    for file in files:
+        if file.index != 0:
+            offset: int = 0
+            file_count: int = 0
+            fla = flas[file.index]
+
+            assert fla.path
+            archive_path = to / fla.path
+
+            if is_gam(archive_path):
+                archive_path = to_basepath(archive_path, gam_path).with_suffix(
+                    UNGAM_SUFFIX
+                )
+
+        assert archive_path
+
+        text_suffix = get_suffix_from_type(file.type)
+
+        processed_dir = base / archive_path.parent.name
+        input_path = (
+            processed_dir
+            / archive_path.with_suffix(
                 f".{file_count}.{file.type:04X}{text_suffix}"
-            )
+            ).name
+        )
 
-            load_file(source_file, output_path, file, offset)
+        assert input_path.exists()
 
-            file_count += 1
-            offset += file.size
+        if save_file(input_path, archive_path, file, offset, append=file_count != 0):
+            updates.append(file)
 
+        file_count += 1
+        offset += file.size
 
-def pack(base: Path, to: Path, sys_path: Path, gam_path: Path, flas: dict[int, FLA]):
-    for ld_file in sys_path.rglob("LD*.BIN"):
-        files = ld_load(ld_file)
-        updated_files = []
-
-        for file in files:
-            if file.index != 0:
-                offset: int = 0
-                file_count: int = 0
-                fla = flas[file.index]
-
-                assert fla.path
-                archive_path = to / fla.path
-
-                if is_gam(archive_path):
-                    archive_path = to_basepath(archive_path, gam_path).with_suffix(
-                        UNGAM_SUFFIX
-                    )
-
-            assert archive_path
-
-            text_suffix = get_suffix_from_type(file.type)
-
-            processed_dir = base / archive_path.parent.name
-            input_path = (
-                processed_dir
-                / archive_path.with_suffix(
-                    f".{file_count}.{file.type:04X}{text_suffix}"
-                ).name
-            )
-
-            assert input_path.exists()
-
-            if save_file(
-                input_path, archive_path, file, offset, append=file_count != 0
-            ):
-                updated_files.append(file)
-
-            file_count += 1
-            offset += file.size
-
-    # Update LD files
-    for file in updated_files:
-        ld_write(file)
+    return updates
 
 
 if __name__ == "__main__":
-    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
-    unpack(ISO_PATH, LD_PATH, SYS_PATH, GAM_PATH, flas)
-    pack(LD_PATH, ISO_PATH, SYS_PATH, GAM_PATH, flas)
+    flas = flas_load_with_lbas(ENTRY_PATH, XML_PATH)
+    infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, flas, GAM_PATH)
+    unpack(ISO_PATH, LD_PATH, infos, GAM_PATH, flas)
+    pack(LD_PATH, ISO_PATH, infos, GAM_PATH, flas)

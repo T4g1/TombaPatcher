@@ -18,7 +18,7 @@ from common import (
     LD_PATH,
 )
 
-from game_parser.fla import load_flas_with_lbas
+from game_parser.fla import FLA, flas_load_with_lbas
 
 LD_ENTRY_SIZE = 0x14
 
@@ -85,14 +85,26 @@ def group_by_file_index(files: list[FileInfo]) -> Iterator[list[FileInfo]]:
 def ld_write(info: FileInfo):
     """Write back the FileInfo entry into the LD file"""
     with open(info.ld_file, "r+b") as f:
-        f.seek(info.ld_address)
+        f.seek(info.ld_address + 12)
+        ld_size = struct.unpack("<I", f.read(4))[0]
 
-        f.write(info.header)
-        f.write(struct.pack("<H", info.index))
-        f.write(struct.pack("<H", info.type))
-        f.write(struct.pack("<I", info.ram_address))
-        f.write(struct.pack("<I", info.size))
-        f.write(struct.pack("<I", 0))
+        assert info.dest
+
+        print(
+            (
+                f"LD: Write {info.ld_file} at {info.ld_address}. "
+                f"{info.source}->{info.dest} changed: size {ld_size:04X} to {info.size:04X}..."
+            )
+        )
+
+        if info.size != ld_size:
+            f.seek(info.ld_address)
+            f.write(info.header)
+            f.write(struct.pack("<H", info.index))
+            f.write(struct.pack("<H", info.type))
+            f.write(struct.pack("<I", info.ram_address))
+            f.write(struct.pack("<I", info.size))
+            f.write(struct.pack("<I", 0))
 
 
 def ld_load(filepath: Path) -> list[FileInfo]:
@@ -142,18 +154,13 @@ def ld_load(filepath: Path) -> list[FileInfo]:
 
 
 def ld_load_all(
-    base: Path,
-    to: Path,
-    sys_path: Path,
-    entry_path: Path,
-    xml_path: Path,
-    gam_path: Path,
+    base: Path, to: Path, sys_path: Path, flas: dict[int, FLA], gam_path: Path
 ):
-    flas = load_flas_with_lbas(entry_path, xml_path)
     loaded: list[FileInfo] = []
 
     count = 0
-    filepath = flas[0].path
+    assert flas[0].path
+    filepath: Path = base / flas[0].path
 
     for file in sys_path.rglob("LD*.BIN"):
         infos = ld_load(file)
@@ -169,7 +176,7 @@ def ld_load_all(
                     filepath = to_basepath(filepath, gam_path).with_suffix(UNGAM_SUFFIX)
 
             assert filepath
-            info.source = base / filepath
+            info.source = filepath
             info.count = count
             info.set_dest(to)
 
@@ -179,22 +186,29 @@ def ld_load_all(
     return loaded
 
 
+def ld_write_all(infos: list[FileInfo]):
+    for info in infos:
+        ld_write(info)
+
+
 def ld_filter(files: list[FileInfo], pattern: str) -> list[FileInfo]:
     """Pattern is like *.1080"""
     filtered = []
     for info in files:
         if info.dest is None:
             raise ValueError("File info has no dest path", info)
-        if fnmatch.fnmatch(info.dest.name, pattern):
+        if fnmatch.fnmatch(str(info.dest), pattern):
             filtered.append(info)
     return filtered
 
 
 if __name__ == "__main__":
-    files = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, ENTRY_PATH, XML_PATH, GAM_PATH)
+    flas = flas_load_with_lbas(ENTRY_PATH, XML_PATH)
+    files = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, flas, GAM_PATH)
     for file in files:
-        print(
-            f"0x{file.index:04X}: {file.source}\t{file.dest}\t\tType 0x{file.type:04X}, "
-            f"RAM 0x{file.ram_address:08X}, Size 0x{file.size:08X} "
-            f"(s: {file.size}, w: {file.width}; h: {file.height})"
-        )
+        if "AREA00" in str(file.source):
+            print(
+                f"0x{file.index:04X}: {file.source}\t{file.dest}\t\tType 0x{file.type:04X}, "
+                f"RAM 0x{file.ram_address:08X}, Size 0x{file.size:08X} "
+                f"(s: {file.size}, w: {file.width}; h: {file.height})"
+            )

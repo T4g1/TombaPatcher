@@ -14,7 +14,7 @@ IMG_MODE_2_FILE_RAW = "CLUT01.0.1080"
 IMG_MODE_0_FILE_PNG = IMG_MODE_0_FILE_RAW + ".mode0.PNG"
 IMG_MODE_2_FILE_PNG = IMG_MODE_2_FILE_RAW + ".mode2.PNG"
 
-IMG_GREYSCALE = "CLUT.PNG"
+IMG_GRAYSCALE = "CLUT.PNG"
 
 
 def test_extract_img(tmp_path):
@@ -53,12 +53,12 @@ def test_format_img(tmp_path):
     assert filecmp.cmp(mode_2_check, mode_2_out, shallow=False)
 
 
-def test_format_img_greyscale(tmp_path):
+def test_format_img_grayscale(tmp_path):
     res = get_path(IMG_PATH)
-    file = res / IMG_GREYSCALE
+    file = res / IMG_GRAYSCALE
 
     file_out = to_basepath(file, tmp_path).with_suffix(IMG_SUFFIX)
 
     format_img(file, file_out)
 
-    # assert filecmp.cmp(mode_0_check, mode_0_out, shallow=False)
+    # assert no throw

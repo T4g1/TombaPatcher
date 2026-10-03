@@ -2,8 +2,8 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from game_parser.mkpsxiso import dumpsxiso, mkpsxiso
-from game_parser.fla import load_flas_with_lbas
-from game_parser.ld import ld_load_all
+from game_parser.fla import flas_load_with_lbas, flas_update
+from game_parser.ld import ld_load_all, ld_write_all
 from game_parser.files import unpack as files_unpack, pack as files_pack
 from game_parser.gam import ungam_all, gam_all
 from game_parser.packed import unpack_all, pack_all_files
@@ -14,6 +14,7 @@ from game_parser.image import extract_all, format_all
 from patcher.mods import Mods
 
 from common import (
+    to_matching_token,
     OUTPUT_PATH,
     ENTRY_PATH,
     XML_PATH,
@@ -43,9 +44,9 @@ def apply_mods():
 def patch(game: Path, output: Path):
     dumpsxiso(game, ISO_PATH)
     ungam_all(ISO_PATH, GAM_PATH)
-    flas = load_flas_with_lbas(ENTRY_PATH, XML_PATH)
-    infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, ENTRY_PATH, XML_PATH, GAM_PATH)
-    files_unpack(ISO_PATH, LD_PATH, SYS_PATH, GAM_PATH, flas)
+    flas = flas_load_with_lbas(ENTRY_PATH, XML_PATH)
+    infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, flas, GAM_PATH)
+    files_unpack(ISO_PATH, LD_PATH, infos, GAM_PATH, flas)
     unpacked_files = unpack_all(LD_PATH, PACKED_PATH)
     decompress_all(PACKED_PATH, RLE_PATH)
     tim_to_png_all(RLE_PATH, TIM_PATH)
@@ -53,16 +54,19 @@ def patch(game: Path, output: Path):
 
     try:
         updated_path = apply_mods()
-        updated = [path.name.split(".")[0] for path in updated_path]
+        updated_tokens = [to_matching_token(path) for path in updated_path]
     except (FileNotFoundError, ValidationError) as exception:
         print(f"Unable to apply mods: {exception}")
 
-    format_all(IMG_PATH, LD_PATH, updated)
+    format_all(IMG_PATH, LD_PATH, updated_tokens)
     png_to_tim_all(TIM_PATH, RLE_PATH)
     compress_all(RLE_PATH, PACKED_PATH)
     pack_all_files(PACKED_PATH, LD_PATH, unpacked_files)
-    files_pack(LD_PATH, ISO_PATH, SYS_PATH, GAM_PATH, flas)
-    gam_all(GAM_PATH, ISO_PATH, updated)
+    updated_infos = files_pack(LD_PATH, ISO_PATH, infos, GAM_PATH, flas)
+    gam_all(GAM_PATH, ISO_PATH, updated_tokens)
+    ld_write_all(updated_infos)
+    # TODO: Recompute LBA addresses to align on updated file sizes if needed
+    flas_update(ISO_PATH, ENTRY_PATH, flas)
     mkpsxiso(output)
 
 

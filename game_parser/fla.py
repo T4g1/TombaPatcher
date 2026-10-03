@@ -1,3 +1,5 @@
+import os
+import struct
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -43,7 +45,7 @@ def load_flas(mainpath: Path) -> dict[int, FLA]:
     return flas
 
 
-def load_flas_with_lbas(mainpath: Path, xmlpath: Path):
+def flas_load_with_lbas(mainpath: Path, xmlpath: Path):
     print("Load LBA...")
     lbas = load_lbas(xmlpath)
 
@@ -55,6 +57,22 @@ def load_flas_with_lbas(mainpath: Path, xmlpath: Path):
         fla.path = lbas[fla.lba]
 
     return flas
+
+
+def flas_update(base: Path, mainpath: Path, flas: dict[int, FLA]):
+    with open(mainpath, "r+b") as f:
+        for index, fla in flas.items():
+            assert fla.path
+            size = os.path.getsize(base / fla.path)
+
+            f.seek(FLA_ADDRESS + (index * FLA_ENTRY_SIZE) + 4)
+            original_size = struct.unpack("<I", f.read(4))[0]
+
+            if size != original_size:
+                print(f"FLA: Write {fla.path}: {original_size:04X} to {size:04X}")
+
+                f.seek(FLA_ADDRESS + (index * FLA_ENTRY_SIZE) + 4)
+                f.write(struct.pack("<I", size))
 
 
 if __name__ == "__main__":

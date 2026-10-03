@@ -1,9 +1,13 @@
 from pathlib import Path
 import filecmp
+import struct
 
 from tests import get_path
 
-from game_parser.packed import unpack, pack
+from game_parser.packed import unpack, pack, pack_all_files
+
+PACKED_DIR = "packed"
+TEST_MULTIPLE_DIR = "packed/test_multiple_files"
 
 PACKED_RLE_FILE = "packed/A005.0.60FF.RLE.PAK"
 PACKED_5080_FILE = "packed/D103.0.5080.PAK"
@@ -60,3 +64,15 @@ def test_pack_5080(tmp_path: Path):
     pack(tmp_path / "packed", result)
 
     assert filecmp.cmp(path, result, shallow=False), "Packed and re-packed file differs"
+
+
+def test_pack_multiple(tmp_path: Path):
+    base = get_path(TEST_MULTIPLE_DIR)
+    result = tmp_path / "SUB1/D1234.5080.PAK"
+
+    pack_all_files(base, tmp_path, {tmp_path / "SUB1/D1234.5080.PAK"})
+
+    with open(result, "rb") as f:
+        count = struct.unpack("<I", f.read(4))[0]
+
+    assert count == 2

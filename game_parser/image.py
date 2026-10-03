@@ -121,7 +121,7 @@ def format_img(file: Path, to: Path):
             assert isinstance(color, tuple)
 
             if len(color) == 2:
-                # Greyscale, Alpha
+                # Grayscale, Alpha
                 value = to_16bit_color(
                     Pixel(
                         color[0],
