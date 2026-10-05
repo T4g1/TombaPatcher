@@ -1,3 +1,4 @@
+import os
 import struct
 import fnmatch
 from pathlib import Path
@@ -202,11 +203,24 @@ def ld_filter(files: list[FileInfo], pattern: str) -> list[FileInfo]:
     return filtered
 
 
+def ld_refresh(files: list[FileInfo]) -> list[FileInfo]:
+    updated = []
+    for info in files:
+        if info.dest is None:
+            raise ValueError(f"Got empty dest for file {info.source}")
+
+        size = os.path.getsize(info.dest)
+        if size != info.size:
+            info.size = size
+            updated.append(info)
+    return updated
+
+
 if __name__ == "__main__":
     flas = flas_load_with_lbas(ENTRY_PATH, XML_PATH)
     files = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, flas, GAM_PATH)
     for file in files:
-        if "AREA00" in str(file.source):
+        if "AREA06" in str(file.source):
             logger.info(
                 f"0x{file.index:04X}: {file.source}\t{file.dest}\t\tType 0x{file.type:04X}, "
                 f"RAM 0x{file.ram_address:08X}, Size 0x{file.size:08X} "

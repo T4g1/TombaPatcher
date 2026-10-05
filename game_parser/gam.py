@@ -1,8 +1,14 @@
 import struct
-
 from pathlib import Path
 
-from common import logger, all, to_basepath, is_matching
+from game_parser import Parser, consume_suffix, add_suffix
+
+from common import (
+    all,
+    to_basepath,
+    logger,
+    is_matching,
+)
 
 GAM_SUFFIX = ".GAM"
 UNGAM_SUFFIX = ".000"
@@ -11,20 +17,43 @@ MAGIC_GAM = b"GAM\0"
 
 LZ_MIN_SIZE = 5
 
+PAK_SUFFIX = ".PAK"
+
+
+class GamParser(Parser):
+    @staticmethod
+    def forward(input: Path, params: dict[str, int] = {}) -> Path:
+        output = consume_suffix(input)
+
+        ungam(input, output)
+
+        return output
+
+    @staticmethod
+    def reverse(input: Path | list[Path], params: dict[str, int] = {}) -> Path:
+        if isinstance(input, list):
+            raise ValueError(
+                "GAM: Requires a single input path but got a list of files instead..."
+            )
+
+        output = add_suffix(input, GAM_SUFFIX)
+
+        gam(input, output)
+
+        return output
+
 
 def is_gam(filepath: Path) -> bool:
     return filepath.suffix == GAM_SUFFIX
 
 
-def ungam(filepath: Path, outputpath: Path, offset: int = 0):
+def ungam(input: Path, outputpath: Path):
     """
     Decompresses a GAM file and writes the uncompressed data to disk.
     """
-    logger.info(f"GAM: Decompressing to {outputpath}...")
+    logger.info(f"GAM: Decompressing {input} to {outputpath}...")
 
-    with open(filepath, "rb") as f:
-        f.seek(offset)
-
+    with open(input, "rb") as f:
         # Read header: magic, output_size, initial command_word
         magic = f.read(4)
         if magic != MAGIC_GAM:
@@ -70,12 +99,12 @@ def ungam(filepath: Path, outputpath: Path, offset: int = 0):
         output_file.write(output[:output_size])
 
 
-def gam(filepath: Path, outputpath: Path):
-    logger.info(f"GAM: Compressing to {outputpath}...")
+def gam(input: Path, outputpath: Path):
+    logger.info(f"GAM: Compressing {input} to {outputpath}...")
 
     output = bytearray()
 
-    with open(filepath, "rb") as f:
+    with open(input, "rb") as f:
         data = f.read()
 
     i = 0
@@ -155,8 +184,3 @@ def gam_all(base: Path, to: Path, matching: list[str] = []):
     for file in base.rglob(all(UNGAM_SUFFIX)):
         if is_matching(file, matching):
             gam(file, to_basepath(file, to).with_suffix(GAM_SUFFIX))
-
-
-if __name__ == "__main__":
-    for path in Path("debug").rglob(all(GAM_SUFFIX)):
-        ungam(path, path.with_suffix(UNGAM_SUFFIX))

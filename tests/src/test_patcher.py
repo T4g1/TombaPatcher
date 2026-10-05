@@ -2,7 +2,7 @@ import filecmp
 
 from tests import get_path
 
-from game_parser.image import format_img, extract_img, GRPX_SUFFIX
+from game_parser.grpx import grpx_extract, grpx_format, GRPX_SUFFIX
 from game_parser.files import save_file, load_file
 from game_parser.ld import FileInfo
 from game_parser.gam import UNGAM_SUFFIX, GAM_SUFFIX, gam, ungam
@@ -26,7 +26,7 @@ def test_patcher(tmp_path):
     info = FileInfo(base, ld_address=0, index=0, type=0x1080, ram_address=0, size=0)
 
     # PNG to formated
-    format_img(img, formated)
+    grpx_format(img, formated)
     # Formated to LD
     save_file(formated, ld_file, info, 0)
     # LD to GAM
@@ -41,7 +41,7 @@ def test_patcher(tmp_path):
     # LD to formated
     load_file(rev_ld_file, rev_formated_file, info, 0)
     # Fortmated to IMG
-    extract_img(rev_formated_file, rev_img_file, 256, 32, 2)
+    grpx_extract(rev_formated_file, rev_img_file, 256, 32, 2)
 
     assert filecmp.cmp(formated, rev_formated_file, shallow=False)
     assert filecmp.cmp(ld_file, rev_ld_file, shallow=False)

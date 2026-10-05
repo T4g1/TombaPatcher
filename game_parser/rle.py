@@ -1,13 +1,10 @@
 from pathlib import Path
 
-from game_parser.tim import TIM_SUFFIX, TIM_HEADER
+from game_parser import Parser, consume_suffix, add_suffix
+from game_parser.tim import TIM_HEADER
 
 from common import (
     logger,
-    all,
-    to_basepath,
-    RLE_PATH,
-    PACKED_PATH,
 )
 
 RLE_SUFFIX = ".RLE"
@@ -15,7 +12,30 @@ RLE_SUFFIX = ".RLE"
 COMMAND_SIZE = 8
 
 
-def decompress(filepath: Path, outputpath: Path):
+class RLEParser(Parser):
+    @staticmethod
+    def forward(input: Path, params: dict[str, int] = {}) -> Path:
+        output = consume_suffix(input)
+
+        rle_decompress(input, output)
+
+        return output
+
+    @staticmethod
+    def reverse(input: Path | list[Path], params: dict[str, int] = {}) -> Path:
+        if isinstance(input, list):
+            raise ValueError(
+                "RLE: Requires a single file to be compressed but got a list instead"
+            )
+
+        output = add_suffix(input, RLE_SUFFIX)
+
+        rle_compress(input, output)
+
+        return output
+
+
+def rle_decompress(filepath: Path, outputpath: Path):
     """
     Decompresses a RLE file and writes the uncompressed data to disk.
     """
@@ -65,8 +85,8 @@ def decompress(filepath: Path, outputpath: Path):
         output_file.write(output)
 
 
-def compress(filepath: Path, outputpath: Path):
-    logger.info(f"RLE: Compressing {filepath}...")
+def rle_compress(filepath: Path, outputpath: Path):
+    logger.info(f"RLE: Compressing {filepath} to {outputpath}...")
 
     with open(filepath, "rb") as f:
         f.seek(len(TIM_HEADER))
@@ -126,20 +146,3 @@ def compress(filepath: Path, outputpath: Path):
 
     with open(outputpath, "wb") as output_file:
         output_file.write(output)
-
-
-def decompress_all(source: Path, to: Path) -> set[Path]:
-    files = set()
-    for file in source.rglob(all(RLE_SUFFIX)):
-        decompress(file, to_basepath(file, to).with_suffix(TIM_SUFFIX))
-        files.add(file)
-    return files
-
-
-def compress_all(source: Path, to: Path):
-    for file in source.rglob(all(TIM_SUFFIX)):
-        compress(file, to_basepath(file, to).with_suffix(RLE_SUFFIX))
-
-
-if __name__ == "__main__":
-    decompress_all(PACKED_PATH, RLE_PATH)

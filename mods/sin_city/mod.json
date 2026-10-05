@@ -7,7 +7,6 @@
             "file": "CLUT.PNG",
             "targets": [
                 {
-                    "stage": "img",
                     "pattern": "AREA*/CLUT*.PNG"
                 }
             ]

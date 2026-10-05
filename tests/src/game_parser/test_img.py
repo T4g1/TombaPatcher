@@ -2,64 +2,65 @@ import filecmp
 
 from tests import get_path
 
-from game_parser.image import extract_img, format_img, GRPX_SUFFIX
+from game_parser.grpx import grpx_format, grpx_extract, GRPX_SUFFIX
 
 from common import to_basepath, PNG_SUFFIX
 
-IMG_PATH = "img"
+GRPX_PATH = "grpx"
 
-IMG_MODE_0_FILE_RAW = "B000.0.1080"
-IMG_MODE_2_FILE_RAW = "CLUT01.0.1080"
+GRPX_MODE_0_FILE_RAW = "test_extract_mode_0.GRPX"
+GRPX_MODE_0_FILE_PNG = "test_extract_mode_0.PNG"
 
-IMG_MODE_0_FILE_PNG = IMG_MODE_0_FILE_RAW + ".mode0.PNG"
-IMG_MODE_2_FILE_PNG = IMG_MODE_2_FILE_RAW + ".mode2.PNG"
+GRPX_MODE_2_FILE_RAW = "test_extract_mode_2.GRPX"
+GRPX_MODE_2_FILE_PNG = "test_extract_mode_2.PNG"
 
-IMG_GRAYSCALE = "CLUT.PNG"
-
-
-def test_extract_img(tmp_path):
-    res = get_path(IMG_PATH)
-    mode_0 = res / IMG_MODE_0_FILE_RAW
-    mode_2 = res / IMG_MODE_2_FILE_RAW
-
-    mode_0_check = res / IMG_MODE_0_FILE_PNG
-    mode_2_check = res / IMG_MODE_2_FILE_PNG
-
-    mode_0_out = to_basepath(mode_0, tmp_path).with_suffix(PNG_SUFFIX)
-    mode_2_out = to_basepath(mode_2, tmp_path).with_suffix(PNG_SUFFIX)
-
-    extract_img(mode_0, mode_0_out, 512, 256, 0)
-    extract_img(mode_2, mode_2_out, 256, 32, 2)
-
-    assert filecmp.cmp(mode_0_check, mode_0_out, shallow=False)
-    assert filecmp.cmp(mode_2_check, mode_2_out, shallow=False)
+GRPX_GRAYSCALE_PNG = "test_format_mode_2.PNG"
+GRPX_GRAYSCALE_RAW = "test_format_mode_2.GRPX"
 
 
-def test_format_img(tmp_path):
-    res = get_path(IMG_PATH)
-    mode_0 = res / IMG_MODE_0_FILE_PNG
-    mode_2 = res / IMG_MODE_2_FILE_PNG
+def test_grpx_extract(tmp_path):
+    res = get_path(GRPX_PATH)
+    mode_0_input = res / GRPX_MODE_0_FILE_RAW
+    mode_2_input = res / GRPX_MODE_2_FILE_RAW
 
-    # mode_0_check = res / IMG_MODE_0_FILE_RAW
-    mode_2_check = res / IMG_MODE_2_FILE_RAW
+    mode_0_target = res / GRPX_MODE_0_FILE_PNG
+    mode_2_target = res / GRPX_MODE_2_FILE_PNG
 
-    mode_0_out = to_basepath(mode_0, tmp_path).with_suffix(GRPX_SUFFIX)
-    mode_2_out = to_basepath(mode_2, tmp_path).with_suffix(GRPX_SUFFIX)
+    mode_0_output = tmp_path / mode_0_target.with_suffix(PNG_SUFFIX).name
+    mode_2_output = tmp_path / mode_2_target.with_suffix(PNG_SUFFIX).name
 
-    format_img(mode_0, mode_0_out)
-    format_img(mode_2, mode_2_out)
+    grpx_extract(mode_0_input, mode_0_output, 512, 256, 0)
+    grpx_extract(mode_2_input, mode_2_output, 256, 32, 2)
 
-    # TODO: Handle mode 0 for formating images
-    # assert filecmp.cmp(mode_0_check, mode_0_out, shallow=False)
-    assert filecmp.cmp(mode_2_check, mode_2_out, shallow=False)
+    assert filecmp.cmp(mode_0_target, mode_0_output, shallow=False)
+    assert filecmp.cmp(mode_2_target, mode_2_output, shallow=False)
 
 
-def test_format_img_grayscale(tmp_path):
-    res = get_path(IMG_PATH)
-    file = res / IMG_GRAYSCALE
+def test_grpx_format(tmp_path):
+    res = get_path(GRPX_PATH)
+    mode_0_input = res / GRPX_MODE_0_FILE_PNG
+    mode_2_input = res / GRPX_MODE_2_FILE_PNG
 
-    file_out = to_basepath(file, tmp_path).with_suffix(GRPX_SUFFIX)
+    mode_0_target = res / GRPX_MODE_0_FILE_RAW
+    mode_2_target = res / GRPX_MODE_2_FILE_RAW
 
-    format_img(file, file_out)
+    mode_0_output = tmp_path / mode_0_target.with_suffix(GRPX_SUFFIX).name
+    mode_2_output = tmp_path / mode_2_target.with_suffix(GRPX_SUFFIX).name
 
-    # assert no throw
+    grpx_format(mode_0_input, mode_0_output)
+    grpx_format(mode_2_input, mode_2_output)
+
+    assert filecmp.cmp(mode_0_target, mode_0_output, shallow=False)
+    assert filecmp.cmp(mode_2_target, mode_2_output, shallow=False)
+
+
+def test_format_GRPX_grayscale(tmp_path):
+    res = get_path(GRPX_PATH)
+    file_input = res / GRPX_GRAYSCALE_PNG
+    file_target = res / GRPX_GRAYSCALE_RAW
+
+    file_output = to_basepath(file_input, tmp_path).with_suffix(GRPX_SUFFIX)
+
+    grpx_format(file_input, file_output)
+
+    assert filecmp.cmp(file_target, file_output, shallow=False)

@@ -41,10 +41,10 @@ PATTERN_TO_SUFFIX: dict[int, str] = {
     0x54FF: ".PAK",
     0x55FF: ".PAK",
     # Tomba! or Red Kokka sprites
-    0x6080: ".RLE.PAK",
-    0x60FF: ".RLE.PAK",
-    0x6280: ".RLE.PAK",
-    0x62FF: ".RLE.PAK",
+    0x6080: ".TIM.RLE.PAK",
+    0x60FF: ".TIM.RLE.PAK",
+    0x6280: ".TIM.RLE.PAK",
+    0x62FF: ".TIM.RLE.PAK",
     0x63FF: ".TIM.GAM.PAK",
     # Text/Dialogs
     0xD0FF: ".WFM",

@@ -17,25 +17,39 @@ import os
 import struct
 from pathlib import Path
 
-from game_parser.rle import RLE_SUFFIX
+from game_parser import Parser, consume_suffix, consume_token, add_suffix, add_token
 
 from common import (
     logger,
-    all,
     read_int,
     to_basepath,
-    LD_PATH,
-    PACKED_PATH,
 )
 
-PACKED_SUFFIX = ".PAK"
+PAK_SUFFIX = ".PAK"
 
 
-def get_path_packed(base: Path) -> Path:
-    return base / "pak"
+class PackedParser(Parser):
+    @staticmethod
+    def forward(input: Path, params: dict[str, int] = {}) -> list[Path]:
+        return unpack(input)
+
+    @staticmethod
+    def reverse(files: Path | list[Path], params: dict[str, int] = {}) -> Path:
+        if isinstance(files, Path):
+            raise ValueError(
+                f"PAK: Requires a list of files to be packed but got {input} instead"
+            )
+
+        output = files[0]
+        output = consume_token(output)
+        output = add_suffix(output, PAK_SUFFIX)
+
+        pack(files, output)
+
+        return output
 
 
-def unpack(filepath: Path, basepath: Path) -> list[Path]:
+def unpack(filepath: Path, basepath: Path | None = None) -> list[Path]:
     """Unpacking file to a given directory"""
     logger.info(f"Packed: Unpacking {filepath}...")
 
@@ -88,12 +102,14 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
                 f"Invalid size with {entry_index}: {data_start:08X} to {data_end:08X}"
             )
 
-        suffix = Path(filepath.stem).suffix
-        base_stem = Path(filepath.stem).stem
+        if basepath:
+            outputpath = to_basepath(filepath, basepath)
+        else:
+            outputpath = filepath.parent / filepath.name
 
-        outputpath = to_basepath(filepath, basepath).with_name(
-            f"{base_stem}.{entry_index:04X}{suffix}"
-        )
+        outputpath = consume_suffix(filepath)
+        outputpath = add_token(outputpath, f"{entry_index:04X}")
+
         logger.info(f"Unpacking {outputpath} of size: {size}...")
 
         with open(outputpath, "wb") as f:
@@ -106,26 +122,14 @@ def unpack(filepath: Path, basepath: Path) -> list[Path]:
     return results
 
 
-def pack(inputdirectory: Path, outputpath: Path):
-    """Packing file in a given directory to a given path
-    Packed files must match the pattern implied by the output filename
-    input: base /
-    output: base / packed / subdirectory / file"""
-    logger.info(f"Packed: Re-packing to {outputpath}...")
-
-    suffix = Path(outputpath.stem).suffix
-    base_stem = Path(outputpath.stem).stem
-
-    pattern = f"{outputpath.parent.name}/{base_stem}.*{suffix}"
+def pack(files: list[Path], outputpath: Path):
+    """Pack a list of files"""
+    logger.info(f"PAK: Re-packing to {outputpath}...")
 
     # 5080 files does not have the last entry being the EOF address
-    with_eof = suffix != ".5080"
+    with_eof = ".5080" not in outputpath.suffixes
 
-    # Ordering is important: This assumes the list is ordered by hexadecimal suffixes
-    # ie: 0001.x is before 000A.x
-    unpacked_filepaths = [path for path in inputdirectory.rglob(pattern)]
-
-    entry_count = len(unpacked_filepaths)
+    entry_count = len(files)
 
     with open(outputpath, "wb") as output:
         # Write file count
@@ -136,7 +140,7 @@ def pack(inputdirectory: Path, outputpath: Path):
         if with_eof:
             offset += 4
 
-        for unpacked_path in unpacked_filepaths:
+        for unpacked_path in files:
             output.write(struct.pack("<I", offset))
             offset += os.path.getsize(unpacked_path)
 
@@ -144,41 +148,6 @@ def pack(inputdirectory: Path, outputpath: Path):
             output.write(struct.pack("<I", offset))
 
         # Write files
-        for unpacked_path in unpacked_filepaths:
+        for unpacked_path in files:
             with open(unpacked_path, "rb") as f:
                 output.write(f.read())
-
-
-def unpack_all(source: Path, to: Path) -> set[Path]:
-    """Unpack all file with .PAK in source to given to
-    Returns list of packed files processed"""
-    files = set()
-    for file in source.rglob(all(PACKED_SUFFIX)):
-        unpack(file, to)
-        files.add(file)
-    return files
-
-
-def pack_all(source: Path, to: Path):
-    rle_files = [file for file in source.rglob(all(RLE_SUFFIX))]
-
-    # Build list of files from the extracted ones
-    files = set()
-    for file in rle_files:
-        parts = file.name.split(".")
-        cleaned_parts = parts[:-2] + [parts[-1]]
-
-        new_name = ".".join(cleaned_parts) + PACKED_SUFFIX
-        files.add(file.parent / new_name)
-
-    pack_all_files(source, to, files)
-
-
-def pack_all_files(source: Path, to: Path, files: set[Path]):
-    """Same as pack but with explicit list of files"""
-    for file in files:
-        pack(source, to_basepath(file, to))
-
-
-if __name__ == "__main__":
-    unpack_all(LD_PATH, PACKED_PATH)

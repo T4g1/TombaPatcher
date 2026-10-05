@@ -68,7 +68,9 @@ def save_file(
 
 def unpack(
     base: Path, to: Path, files: list[FileInfo], gam_path: Path, flas: dict[int, FLA]
-):
+) -> list[tuple[FileInfo, Path]]:
+    unpacked: list[tuple[FileInfo, Path]] = []
+
     source_file: Path | None = None
     offset: int = 0
     file_count: int = 0
@@ -99,8 +101,12 @@ def unpack(
 
         load_file(source_file, output_path, file, offset)
 
+        unpacked.append((file, output_path))
+
         file_count += 1
         offset += file.size
+
+    return unpacked
 
 
 def pack(
