@@ -1,0 +1,15 @@
+{
+    "name": "Fix the damn key",
+    "description": "There's three pixels that can't be unseen",
+    "version": "0.0.1",
+    "patchs": [
+        {
+            "file": "A002.0.10FF.PNG",
+            "targets": [
+                {
+                    "pattern": "AREA00/A002.0.10FF.PNG"
+                }
+            ]
+        }
+    ]
+}

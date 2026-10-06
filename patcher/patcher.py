@@ -9,7 +9,7 @@ from game_parser.ld import ld_load_all, ld_write_all
 from game_parser.files import unpack as files_unpack, pack as files_pack
 from game_parser.gam import ungam_all, gam_all
 
-from patcher.mods import Mods
+from patcher.mods import ModsManager
 
 from common import (
     logger,
@@ -29,7 +29,7 @@ def apply_mods(path: Path = OUTPUT_PATH):
     """Return list of updated file paths"""
     updated: set[Path] = set()
 
-    mods = Mods(MODS_PATH)
+    mods = ModsManager(MODS_PATH)
     for command in mods.commands():
         updated |= command.apply(path)
 

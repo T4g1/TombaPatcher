@@ -10,15 +10,22 @@ from ui.clut_widget import CLUTView, ClutUpdate
 from ui.skin_preview import SkinPreview
 
 from common import GuiLogger, logger
+
 from fe.worker.patcher import PatchWorker, PatchCommand
-from game_parser.vram import to_16bit_color, Pixel
+from fe.mods_widget import ModsManagerWidget
+
+from game_parser.image import to_16bit_color, Pixel
 
 
 class MainWindow(QMainWindow):
+    mods_widget: ModsManagerWidget
+
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+
+        self.mods_widget = ModsManagerWidget(self.ui)
 
         self.settings = QSettings("Tomba Club", "Tomba Patcher")
         self.default_dir = str(

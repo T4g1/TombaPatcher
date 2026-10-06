@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>624</width>
-    <height>524</height>
+    <width>947</width>
+    <height>796</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -63,8 +63,29 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
+      <widget class="QWidget" name="mods_tab">
+       <attribute name="title">
+        <string>Mods</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <layout class="QHBoxLayout" name="actions_layout">
+          <item>
+           <widget class="QPushButton" name="refresh_mod_list">
+            <property name="text">
+             <string>Refresh</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QListWidget" name="mod_list"/>
+        </item>
+       </layout>
+      </widget>
       <widget class="QWidget" name="log_tab">
        <attribute name="title">
         <string>Log</string>
@@ -90,7 +111,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>624</width>
+     <width>947</width>
      <height>22</height>
     </rect>
    </property>

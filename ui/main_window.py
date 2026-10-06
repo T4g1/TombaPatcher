@@ -45,6 +45,8 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QMenuBar,
     QPushButton,
@@ -62,7 +64,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(624, 524)
+        MainWindow.resize(947, 796)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
@@ -103,6 +105,25 @@ class Ui_MainWindow(object):
 
         self.tabWidget = QTabWidget(self.centralwidget)
         self.tabWidget.setObjectName("tabWidget")
+        self.mods_tab = QWidget()
+        self.mods_tab.setObjectName("mods_tab")
+        self.verticalLayout_3 = QVBoxLayout(self.mods_tab)
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.actions_layout = QHBoxLayout()
+        self.actions_layout.setObjectName("actions_layout")
+        self.refresh_mod_list = QPushButton(self.mods_tab)
+        self.refresh_mod_list.setObjectName("refresh_mod_list")
+
+        self.actions_layout.addWidget(self.refresh_mod_list)
+
+        self.verticalLayout_3.addLayout(self.actions_layout)
+
+        self.mod_list = QListWidget(self.mods_tab)
+        self.mod_list.setObjectName("mod_list")
+
+        self.verticalLayout_3.addWidget(self.mod_list)
+
+        self.tabWidget.addTab(self.mods_tab, "")
         self.log_tab = QWidget()
         self.log_tab.setObjectName("log_tab")
         self.verticalLayout = QVBoxLayout(self.log_tab)
@@ -124,7 +145,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName("menubar")
-        self.menubar.setGeometry(QRect(0, 0, 624, 22))
+        self.menubar.setGeometry(QRect(0, 0, 947, 22))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -132,7 +153,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
 
         QMetaObject.connectSlotsByName(MainWindow)
 
@@ -150,6 +171,13 @@ class Ui_MainWindow(object):
         )
         self.patch_button.setText(
             QCoreApplication.translate("MainWindow", "Patch", None)
+        )
+        self.refresh_mod_list.setText(
+            QCoreApplication.translate("MainWindow", "Refresh", None)
+        )
+        self.tabWidget.setTabText(
+            self.tabWidget.indexOf(self.mods_tab),
+            QCoreApplication.translate("MainWindow", "Mods", None),
         )
         self.tabWidget.setTabText(
             self.tabWidget.indexOf(self.log_tab),
