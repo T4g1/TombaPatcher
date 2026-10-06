@@ -5,8 +5,8 @@ from pipeline.orchestrator import create_orchestrator
 
 from game_parser.mkpsxiso import dumpsxiso, mkpsxiso
 from game_parser.fla import flas_load_with_lbas, flas_update
-from game_parser.ld import ld_load_all, ld_write_all, ld_refresh
-from game_parser.files import unpack as files_unpack
+from game_parser.ld import ld_load_all, ld_write_all
+from game_parser.files import unpack as files_unpack, pack as files_pack
 from game_parser.gam import ungam_all, gam_all
 
 from patcher.mods import Mods
@@ -25,13 +25,13 @@ from common import (
 )
 
 
-def apply_mods():
+def apply_mods(path: Path = OUTPUT_PATH):
     """Return list of updated file paths"""
     updated: set[Path] = set()
 
     mods = Mods(MODS_PATH)
     for command in mods.commands():
-        updated |= command.apply(OUTPUT_PATH)
+        updated |= command.apply(path)
 
     return updated
 
@@ -51,7 +51,7 @@ def patch(game: Path, output: Path):
     orchestrator.process(forward=True)
 
     try:
-        updated_path = apply_mods()
+        updated_path = apply_mods(LD_PATH)
 
         updated_tokens = []
         for path in updated_path:
@@ -64,11 +64,9 @@ def patch(game: Path, output: Path):
 
     orchestrator.process(forward=False)
 
+    updated_infos = files_pack(LD_PATH, ISO_PATH, infos, GAM_PATH, flas)
     gam_all(GAM_PATH, ISO_PATH, updated_tokens)
-
-    updated_infos = ld_refresh(infos)
     ld_write_all(updated_infos)
-
     # TODO: Recompute LBA addresses to align on updated file sizes if needed
     flas_update(ISO_PATH, ENTRY_PATH, flas)
     mkpsxiso(output)
