@@ -1,7 +1,7 @@
 from pathlib import Path
 from pydantic import ValidationError
 
-from pipeline.orchestrator import create_orchestrator
+from pipeline.orchestrator import create_orchestrator, MultiStageOrchestrator
 
 from game_parser.mkpsxiso import dumpsxiso, mkpsxiso
 from game_parser.fla import flas_load_with_lbas, flas_update
@@ -25,51 +25,64 @@ from common import (
 )
 
 
-def apply_mods(path: Path = OUTPUT_PATH):
-    """Return list of updated file paths"""
-    updated: set[Path] = set()
+class Patcher:
+    orchestrator: MultiStageOrchestrator
 
-    mods = ModsManager(MODS_PATH)
-    for command in mods.commands():
-        updated |= command.apply(path)
+    def __init__(self):
+        self.orchestrator = create_orchestrator()
 
-    return updated
+    def patch(self, game: Path, output: Path):
+        self.extract(game)
+        self.apply_mods()
+        self.compile(output)
 
+    def extract(self, game: Path):
+        """Extraction step"""
+        dumpsxiso(game, ISO_PATH)
+        ungam_all(ISO_PATH, GAM_PATH)
+        self._flas = flas_load_with_lbas(ENTRY_PATH, XML_PATH)
+        self._infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, self._flas, GAM_PATH)
+        unpacked = files_unpack(ISO_PATH, LD_PATH, self._infos, GAM_PATH, self._flas)
 
-def patch(game: Path, output: Path):
-    orchestrator = create_orchestrator()
+        for info, path in unpacked:
+            self.orchestrator.add_task(
+                path, params={"width": info.width, "height": info.height}
+            )
 
-    dumpsxiso(game, ISO_PATH)
-    ungam_all(ISO_PATH, GAM_PATH)
-    flas = flas_load_with_lbas(ENTRY_PATH, XML_PATH)
-    infos = ld_load_all(ISO_PATH, LD_PATH, SYS_PATH, flas, GAM_PATH)
-    unpacked = files_unpack(ISO_PATH, LD_PATH, infos, GAM_PATH, flas)
+        self.orchestrator.process(forward=True)
 
-    for info, path in unpacked:
-        orchestrator.add_task(path, params={"width": info.width, "height": info.height})
+    def apply_mods(self):
+        """Return list of updated file paths"""
+        try:
+            updated_path = self._apply_mods(LD_PATH)
 
-    orchestrator.process(forward=True)
+            self._updated_tokens = []
+            for path in updated_path:
+                self._updated_tokens.append(to_matching_token(path))
 
-    try:
-        updated_path = apply_mods(LD_PATH)
+                task = self.orchestrator.get_task(path)
+                task.ready()
+        except (FileNotFoundError, ValidationError) as exception:
+            logger.info(f"Unable to apply mods: {exception}")
 
-        updated_tokens = []
-        for path in updated_path:
-            updated_tokens.append(to_matching_token(path))
+    def compile(self, output: Path = OUTPUT_PATH):
+        self.orchestrator.process(forward=False)
 
-            task = orchestrator.get_task(path)
-            task.ready()
-    except (FileNotFoundError, ValidationError) as exception:
-        logger.info(f"Unable to apply mods: {exception}")
+        updated_infos = files_pack(LD_PATH, ISO_PATH, self._infos, GAM_PATH, self._flas)
+        gam_all(GAM_PATH, ISO_PATH, self._updated_tokens)
+        ld_write_all(updated_infos)
+        # TODO: Recompute LBA addresses to align on updated file sizes if needed
+        flas_update(ISO_PATH, ENTRY_PATH, self._flas)
+        mkpsxiso(output)
 
-    orchestrator.process(forward=False)
+    def _apply_mods(self, path: Path):
+        updated: set[Path] = set()
 
-    updated_infos = files_pack(LD_PATH, ISO_PATH, infos, GAM_PATH, flas)
-    gam_all(GAM_PATH, ISO_PATH, updated_tokens)
-    ld_write_all(updated_infos)
-    # TODO: Recompute LBA addresses to align on updated file sizes if needed
-    flas_update(ISO_PATH, ENTRY_PATH, flas)
-    mkpsxiso(output)
+        mods = ModsManager(MODS_PATH)
+        for command in mods.commands():
+            updated |= command.apply(path)
+
+        return updated
 
 
 if __name__ == "__main__":
@@ -78,4 +91,5 @@ if __name__ == "__main__":
     )
     patched_path = game_path.parent / f"{game_path.stem}.patched{game_path.suffix}"
 
-    patch(game_path, patched_path)
+    patcher = Patcher()
+    patcher.patch(game_path, patched_path)

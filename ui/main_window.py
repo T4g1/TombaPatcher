@@ -49,12 +49,12 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMainWindow,
     QMenuBar,
+    QPlainTextEdit,
     QPushButton,
     QSizePolicy,
     QSpacerItem,
     QStatusBar,
     QTabWidget,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -128,7 +128,7 @@ class Ui_MainWindow(object):
         self.log_tab.setObjectName("log_tab")
         self.verticalLayout = QVBoxLayout(self.log_tab)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.log = QTextEdit(self.log_tab)
+        self.log = QPlainTextEdit(self.log_tab)
         self.log.setObjectName("log")
 
         self.verticalLayout.addWidget(self.log)

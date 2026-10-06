@@ -92,7 +92,7 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QTextEdit" name="log"/>
+         <widget class="QPlainTextEdit" name="log"/>
         </item>
        </layout>
       </widget>

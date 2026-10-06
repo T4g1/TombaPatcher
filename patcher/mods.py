@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from patcher.patch import Patch, PatchCommand
 
 from common import (
+    logger,
     MODS_PATH,
 )
 
@@ -66,22 +67,27 @@ class ModsManager:
         self.base = base
 
         # Loads mod load order
-        with open(base / LOAD_ORDER_NAME, "r") as f:
-            load_order = LoadOrder.model_validate_json(f.read())
+        try:
+            with open(base / LOAD_ORDER_NAME, "r") as f:
+                load_order = LoadOrder.model_validate_json(f.read())
 
-        for code in load_order.order:
-            mod = self.load_mod(self.base, code)
-            mod._is_active = True
-            self.mods.append(mod)
+            for code in load_order.order:
+                mod = self.load_mod(self.base, code)
+                mod._is_active = True
+                self.mods.append(mod)
+        except Exception as exception:
+            logger.warning(f"Unable to parse load_order file: {exception}")
 
         # Loads mod directories
-        codes = [path.name for path in MODS_PATH.iterdir()]
+        codes = [path.name for path in MODS_PATH.iterdir() if path.is_dir()]
         for code in codes:
             if self.is_loaded(code):
                 continue
 
             mod = self.load_mod(self.base, code)
             self.mods.append(mod)
+
+        logger.info("Mods (re)loaded")
 
     def is_loaded(self, code: str) -> bool:
         """Indicate if that mod is already loaded"""
@@ -95,6 +101,7 @@ class ModsManager:
             with open(Mod.get_path(base, code), "r") as f:
                 mod = Mod.model_validate_json(f.read())
         except Exception as exception:
+            logger.warning(f"Unable to load mod {code}: {exception}")
             mod = Mod.create_empty(code, str(exception))
 
         mod.set_base(base, code)

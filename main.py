@@ -1,6 +1,5 @@
 import os
 import sys
-import logging
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 from PySide6.QtCore import QSettings
@@ -9,23 +8,18 @@ from ui.main_window import Ui_MainWindow
 from ui.clut_widget import CLUTView, ClutUpdate
 from ui.skin_preview import SkinPreview
 
-from common import GuiLogger, logger
-
-from fe.worker.patcher import PatchWorker, PatchCommand
-from fe.mods_widget import ModsManagerWidget
+from fe import PatchWorker, ModsManagerWidget, LogWidget
 
 from game_parser.image import to_16bit_color, Pixel
 
+from common import logger
+
 
 class MainWindow(QMainWindow):
-    mods_widget: ModsManagerWidget
-
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-
-        self.mods_widget = ModsManagerWidget(self.ui)
 
         self.settings = QSettings("Tomba Club", "Tomba Patcher")
         self.default_dir = str(
@@ -49,9 +43,9 @@ class MainWindow(QMainWindow):
         self.ui.game_path_browse.clicked.connect(self.browse_file)
         self.ui.patch_button.clicked.connect(self.start_patch_process)
 
-        log_handler = GuiLogger(self.ui.log)
-        logging.getLogger().addHandler(log_handler)
-        logging.getLogger().setLevel(logging.DEBUG)
+        self.log_wdiget = LogWidget(self.ui)
+
+        self.mods_widget = ModsManagerWidget(self.ui)
 
         self.worker = None
         self.patches = []
@@ -67,17 +61,8 @@ class MainWindow(QMainWindow):
         if file_path:
             self.ui.game_path_input.setText(file_path)
 
-    def add_patch_command(self, command: PatchCommand):
-        """Replace existing command or add a new one"""
-        for i in range(len(self.patches)):
-            if self.patches[i] == command:
-                self.patches[i] = command
-                return
-
-        self.patches.append(command)
-
     def on_player_clut_updated(self, update: ClutUpdate):
-        address = (0x0200 * update.position) + 0x02
+        # address = (0x0200 * update.position) + 0x02
 
         clut = bytes()
         for color in update.clut:
@@ -86,7 +71,7 @@ class MainWindow(QMainWindow):
             )
             clut += value.to_bytes(2, byteorder="little")
 
-        self.add_patch_command(PatchCommand("CLUT*.GAM", address, clut))
+        # self.add_patch_command(PatchCommand("CLUT*.GAM", address, clut))
 
     def start_patch_process(self):
         if self.worker is not None:
@@ -105,7 +90,7 @@ class MainWindow(QMainWindow):
         self.ui.game_path_browse.setEnabled(False)
         self.ui.patch_button.setEnabled(False)
 
-        self.worker = PatchWorker(target_path, self.patches)
+        self.worker = PatchWorker(target_path)
 
         self.worker.status_changed.connect(self.update_status)
         self.worker.finished.connect(self.on_patch_complete)

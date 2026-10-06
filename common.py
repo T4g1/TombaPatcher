@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from PySide6 import QtWidgets
+from PySide6 import QtWidgets, QtCore
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -60,18 +60,34 @@ def get_suffix_from_type(file_type: int):
     return PATTERN_TO_SUFFIX.get(file_type, "")
 
 
+class LogSignaler(QtCore.QObject):
+    log_ready = QtCore.Signal(str)
+
+
 class GuiLogger(logging.Handler):
     """Interface between python logging and QT"""
 
-    display: QtWidgets.QTextEdit
-
-    def __init__(self, display: QtWidgets.QTextEdit):
+    def __init__(self, display: QtWidgets.QPlainTextEdit):
         super().__init__()
 
         self.display = display
 
+        self.display.setMaximumBlockCount(1000)
+        self.display.setReadOnly(True)
+
+        self.signaler = LogSignaler()
+        self.signaler.log_ready.connect(self._handle_append)
+
     def emit(self, record):
-        self.display.textCursor().insertText(f"{self.format(record)}\n")
+        try:
+            msg = self.format(record)
+            self.signaler.log_ready.emit(msg)
+        except Exception:
+            self.handleError(record)
+
+    @QtCore.Slot(str)
+    def _handle_append(self, msg: str):
+        self.display.appendPlainText(msg)
 
 
 def bcd_to_int(bcd_byte: int) -> int:
