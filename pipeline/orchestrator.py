@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 from typing import Type
 
@@ -14,10 +15,18 @@ from game_parser.rle import RLEParser, RLE_SUFFIX
 from game_parser.tim import TIMParser, TIM_SUFFIX
 from game_parser.grpx import GRPXParser, GRPX_SUFFIX
 
+from common import logger
+
+TASKS_FILE = "output/tasks.pkl"
+
 
 class MultiStageOrchestrator:
     registry: dict[str, Type[Parser]] = {}
     tasks: list[FileTask] = []
+
+    def __init__(self, with_context: bool = False):
+        if with_context:
+            self.tasks = self.load_raw_tasks()
 
     def register_parser(self, extension: str, parser: Type[Parser]):
         self.registry[extension.lower()] = parser
@@ -31,6 +40,18 @@ class MultiStageOrchestrator:
 
         if parent:
             parent.add_child(task)
+
+    def save_tasks(self, filename: str = TASKS_FILE):
+        with open(filename, "wb") as f:
+            pickle.dump(self.tasks, f)
+
+    def load_raw_tasks(self, filename: str = TASKS_FILE) -> list[FileTask]:
+        try:
+            with open(filename, "rb") as f:
+                return pickle.load(f)
+        except Exception:
+            logger.info("No previous tasks data found: Using an empty one")
+            return []
 
     def get_task(self, output: Path) -> FileTask:
         for task in self.tasks:
@@ -104,8 +125,8 @@ class MultiStageOrchestrator:
             )
 
 
-def create_orchestrator() -> MultiStageOrchestrator:
-    orchestrator = MultiStageOrchestrator()
+def create_orchestrator(with_context: bool = False) -> MultiStageOrchestrator:
+    orchestrator = MultiStageOrchestrator(with_context)
 
     orchestrator.register_parser(PAK_SUFFIX, PackedParser)
     orchestrator.register_parser(GAM_SUFFIX, GamParser)

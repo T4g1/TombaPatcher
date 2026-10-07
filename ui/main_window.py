@@ -88,23 +88,49 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addLayout(self.horizontalLayout)
 
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.patch_layout = QHBoxLayout()
+        self.patch_layout.setObjectName("patch_layout")
+        self.advanced_button = QPushButton(self.centralwidget)
+        self.advanced_button.setObjectName("advanced_button")
+
+        self.patch_layout.addWidget(self.advanced_button)
+
+        self.advanced_layout = QHBoxLayout()
+        self.advanced_layout.setObjectName("advanced_layout")
+        self.extract_button = QPushButton(self.centralwidget)
+        self.extract_button.setObjectName("extract_button")
+
+        self.advanced_layout.addWidget(self.extract_button)
+
+        self.apply_mods_button = QPushButton(self.centralwidget)
+        self.apply_mods_button.setObjectName("apply_mods_button")
+
+        self.advanced_layout.addWidget(self.apply_mods_button)
+
+        self.compile_button = QPushButton(self.centralwidget)
+        self.compile_button.setObjectName("compile_button")
+        self.compile_button.setEnabled(True)
+
+        self.advanced_layout.addWidget(self.compile_button)
+
+        self.patch_layout.addLayout(self.advanced_layout)
+
         self.horizontalSpacer = QSpacerItem(
             40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
 
-        self.horizontalLayout_2.addItem(self.horizontalSpacer)
+        self.patch_layout.addItem(self.horizontalSpacer)
 
         self.patch_button = QPushButton(self.centralwidget)
         self.patch_button.setObjectName("patch_button")
 
-        self.horizontalLayout_2.addWidget(self.patch_button)
+        self.patch_layout.addWidget(self.patch_button)
 
-        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
+        self.verticalLayout_2.addLayout(self.patch_layout)
 
         self.tabWidget = QTabWidget(self.centralwidget)
         self.tabWidget.setObjectName("tabWidget")
+        self.tabWidget.setEnabled(True)
         self.mods_tab = QWidget()
         self.mods_tab.setObjectName("mods_tab")
         self.verticalLayout_3 = QVBoxLayout(self.mods_tab)
@@ -136,6 +162,7 @@ class Ui_MainWindow(object):
         self.tabWidget.addTab(self.log_tab, "")
         self.skin_tab = QWidget()
         self.skin_tab.setObjectName("skin_tab")
+        self.skin_tab.setEnabled(True)
         self.horizontalLayout_3 = QHBoxLayout(self.skin_tab)
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
         self.tabWidget.addTab(self.skin_tab, "")
@@ -168,6 +195,18 @@ class Ui_MainWindow(object):
         )
         self.game_path_browse.setText(
             QCoreApplication.translate("MainWindow", "Browse...", None)
+        )
+        self.advanced_button.setText(
+            QCoreApplication.translate("MainWindow", "Advanced...", None)
+        )
+        self.extract_button.setText(
+            QCoreApplication.translate("MainWindow", "Extract", None)
+        )
+        self.apply_mods_button.setText(
+            QCoreApplication.translate("MainWindow", "Apply mods", None)
+        )
+        self.compile_button.setText(
+            QCoreApplication.translate("MainWindow", "Compile", None)
         )
         self.patch_button.setText(
             QCoreApplication.translate("MainWindow", "Patch", None)

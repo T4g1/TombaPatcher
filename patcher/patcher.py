@@ -28,8 +28,8 @@ from common import (
 class Patcher:
     orchestrator: MultiStageOrchestrator
 
-    def __init__(self):
-        self.orchestrator = create_orchestrator()
+    def __init__(self, with_context: bool = False):
+        self.orchestrator = create_orchestrator(with_context)
 
     def patch(self, game: Path, output: Path):
         self.extract(game)
@@ -50,6 +50,7 @@ class Patcher:
             )
 
         self.orchestrator.process(forward=True)
+        self.orchestrator.save_tasks()
 
     def apply_mods(self):
         """Return list of updated file paths"""

@@ -8,7 +8,13 @@ from ui.main_window import Ui_MainWindow
 from ui.clut_widget import CLUTView, ClutUpdate
 from ui.skin_preview import SkinPreview
 
-from fe import PatchWorker, ModsManagerWidget, LogWidget
+from fe import (
+    PatchWorker,
+    PatchWorkerMode,
+    ModsManagerWidget,
+    LogWidget,
+    PatchButtonsWidget,
+)
 
 from game_parser.image import to_16bit_color, Pixel
 
@@ -18,6 +24,10 @@ from common import logger
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self.worker = PatchWorker()
+        self.patches = []
+
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
@@ -41,14 +51,15 @@ class MainWindow(QMainWindow):
         self.ui.game_path_input.setText(self.default_dir)
 
         self.ui.game_path_browse.clicked.connect(self.browse_file)
-        self.ui.patch_button.clicked.connect(self.start_patch_process)
+
+        self.ui.patch_button.clicked.connect(self.on_patch)
+        self.ui.extract_button.clicked.connect(self.on_extract)
+        self.ui.apply_mods_button.clicked.connect(self.on_apply_mods)
+        self.ui.compile_button.clicked.connect(self.on_compile)
 
         self.log_wdiget = LogWidget(self.ui)
-
         self.mods_widget = ModsManagerWidget(self.ui)
-
-        self.worker = None
-        self.patches = []
+        self.button_widget = PatchButtonsWidget(self.ui, self.worker, parent=self)
 
     def browse_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -73,45 +84,35 @@ class MainWindow(QMainWindow):
 
         # self.add_patch_command(PatchCommand("CLUT*.GAM", address, clut))
 
-    def start_patch_process(self):
-        if self.worker is not None:
+    def on_patch(self):
+        self.start_patch_worker(PatchWorkerMode.ALL)
+
+    def on_extract(self):
+        self.start_patch_worker(PatchWorkerMode.EXTRACT)
+
+    def on_apply_mods(self):
+        self.start_patch_worker(PatchWorkerMode.PATCH)
+
+    def on_compile(self):
+        self.start_patch_worker(PatchWorkerMode.COMPILE)
+
+    def start_patch_worker(self, mode: PatchWorkerMode):
+        if self.worker.running:
             logger.error("Trying to patch a file while patching is already in progress")
             return
 
-        target_path = self.ui.game_path_input.text()
-        self.settings.setValue("last_path", target_path)
+        self.target_path = self.ui.game_path_input.text()
+        self.settings.setValue("last_path", self.target_path)
 
-        if not target_path or not os.path.exists(target_path):
+        if not self.target_path or not os.path.exists(self.target_path):
             QMessageBox.warning(
                 self, "Invalid File", "Please select a valid game file first."
             )
             return
 
-        self.ui.game_path_browse.setEnabled(False)
-        self.ui.patch_button.setEnabled(False)
-
-        self.worker = PatchWorker(target_path)
-
-        self.worker.status_changed.connect(self.update_status)
-        self.worker.finished.connect(self.on_patch_complete)
-
+        self.worker.set_mode(mode)
+        self.worker.set_filepath(self.target_path)
         self.worker.start()
-
-    def update_status(self, message):
-        logger.info(message)
-        self.ui.statusbar.showMessage(message)
-
-    def on_patch_complete(self, success, message):
-        self.ui.game_path_browse.setEnabled(True)
-        self.ui.patch_button.setEnabled(True)
-        self.ui.statusbar.showMessage(message)
-
-        if success:
-            QMessageBox.information(self, "Success", message)
-        else:
-            QMessageBox.critical(self, "Failed", message)
-
-        self.worker = None
 
 
 if __name__ == "__main__":
